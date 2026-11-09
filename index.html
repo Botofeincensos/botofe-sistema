@@ -1267,7 +1267,7 @@ async function iniciar(){
  if(!j.length){lsSet(SKEY,null);sess=null;$('#lgb').disabled=false;return lgMsg('Seu acesso ainda não foi liberado. Fale com a Gestão.')}
  perfil=j[0];role=perfil.papel==='producao'?'producao':'gestao';view=NAV[role][0][0];
  lgMsg('Carregando dados…',true);
- const ok=await carregar(!relog);relog=false;if(!ok){$('#lgb').disabled=false;return lgMsg('Não foi possível carregar os dados'+errBusca+'. Tente de novo.')}
+ const ok=await carregar(!relog);relog=false;if(!ok){$('#lgb').disabled=false;if(errBusca||$('#lgm').textContent.indexOf('ainda não foi iniciado')<0)lgMsg('Não foi possível carregar os dados'+errBusca+'. Tente de novo.');return}
  document.body.classList.remove('lg-on');$('#lg').style.display='none';render()}
 function chave(c,x){return x.id!=null?String(x.id):c==='F'?x.k:(x._k||(x._k=Date.now().toString(36)+Math.random().toString(36).slice(2,8)))}
 function tagTime(c,a){if(c==='VM'){for(let i=a.length-1;i>=0;i--)if(!a[i]._t)a[i]._t=Date.now()*1000+(++tSeq)}else if(c==='CX'||c==='F'){for(let i=0;i<a.length;i++)if(!a[i]._t)a[i]._t=Date.now()*1000+(++tSeq)}}
