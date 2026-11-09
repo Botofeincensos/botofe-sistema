@@ -290,7 +290,7 @@ let VM=[];
 
 /* ===== Navegação e perfis ===== */
 let role='gestao',view='clientes',fcat='Todos',fst=-1,ffam='todas',stab='prod',q='';
-const NAV={gestao:[['clientes','◉','Clientes'],['pedidos','❖','Pedidos'],['producao','⚒','Produção'],['estoque','▣','Estoque'],['receber','＄','A receber']],producao:[['producao','⚒','Produção'],['estoque','▣','Estoque']]};
+const NAV={gestao:[['pedidos','❖','Pedidos'],['clientes','◉','Clientes'],['producao','⚒','Produção'],['estoque','▣','Estoque'],['receber','＄','A receber']],producao:[['producao','⚒','Produção'],['estoque','▣','Estoque']]};
 function renderSide(){
  $('#side').innerHTML='<img class="logo" src="'+LOGOW+'" alt="Boto Fé Incensos">'+
  (perfil&&perfil.papel==='producao'?'':'<div class="seg" role="group" aria-label="Perfil"><button class="'+(role==='gestao'?'on':'')+'" onclick="setRole(\'gestao\')">Gestão</button><button class="'+(role==='producao'?'on':'')+'" onclick="setRole(\'producao\')">Produção</button></div>')+
