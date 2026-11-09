@@ -1,3 +1,12 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161616">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boto Fé">
 <title>Boto Fé · Gestão</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -205,6 +214,25 @@ body.lg-on .app{display:none}
 #lgm{min-height:22px;margin:10px 0 0;color:var(--er);font-size:14px}#lgm.ok{color:var(--mu)}
 .sv{font-size:12px;color:var(--ok)}.sv.er{color:var(--er)}
 .foot .lk{background:none;border:0;padding:0;font:inherit;font-size:13px;color:#d9d0d4;text-decoration:underline;cursor:pointer}
+
+/* Celular (revisão 09/11): cabeçalho compacto, menu em uma linha, resumo em 2 colunas */
+@media(max-width:760px){
+ aside{padding:8px 12px 10px;gap:8px}
+ .logo{width:62px;padding:3px 6px}
+ .seg button{min-height:38px;padding:6px 12px;font-size:14px}
+ .navs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;overflow:visible}
+ .nav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;padding:6px 2px;font-size:12px;line-height:1.1;text-align:center;white-space:nowrap}
+ .nav .ni{font-size:17px;line-height:1}
+ .foot{display:flex;width:100%;align-items:center;gap:10px;padding:0;margin:0;font-size:12px}
+ .foot br{display:none}
+ .foot .lk{margin-left:auto;font-size:13px;min-height:32px}
+ main{padding:14px 12px 40px}
+ h1{font-size:24px;margin:0 0 4px}
+ .lead{font-size:14px;margin:0 0 14px}
+ .kp{grid-template-columns:1fr 1fr;gap:8px}
+ .kp div{padding:10px 12px;font-size:13px;border-radius:12px}
+ .kp b{font-size:19px}
+}
 </style>
 
 <div id="lg"><form class="bx" onsubmit="entrar();return false"><img id="lgimg" alt="Boto Fé Incensos"><h1>Entrar no sistema</h1>
@@ -294,14 +322,17 @@ const NAV={gestao:[['pedidos','❖','Pedidos'],['clientes','◉','Clientes'],['p
 function renderSide(){
  $('#side').innerHTML='<img class="logo" src="'+LOGOW+'" alt="Boto Fé Incensos">'+
  (perfil&&perfil.papel==='producao'?'':'<div class="seg" role="group" aria-label="Perfil"><button class="'+(role==='gestao'?'on':'')+'" onclick="setRole(\'gestao\')">Gestão</button><button class="'+(role==='producao'?'on':'')+'" onclick="setRole(\'producao\')">Produção</button></div>')+
- '<div class="navs">'+NAV[role].map(n=>'<button class="nav '+(view===n[0]?'on':'')+'" onclick="go(\''+n[0]+'\')">'+n[1]+' '+n[2]+'</button>').join('')+
+ '<div class="navs">'+NAV[role].map(n=>'<button class="nav '+(view===n[0]?'on':'')+'" onclick="go(\''+n[0]+'\')"><span class="ni">'+n[1]+'</span> <span class="nt">'+n[2]+'</span></button>').join('')+
  (role==='gestao'?['Dashboard','Financeiro','Balanço'].map(x=>'<button class="nav off" tabindex="-1">'+x+' <span class="soon">fase 2</span></button>').join(''):'')+'</div>'+
  '<div class="foot"><b>'+esc(perfil?perfil.nome||perfil.apelido:'')+'</b><br><span id="sv" class="sv">● Tudo salvo</span><br><button class="lk" onclick="sair()">Sair</button></div>';
 }
 const lastV={};let fbV=false;
 function setRole(r){if(r===role)return;lastV[role]=view;close();role=r;const ok=n=>NAV[r].some(x=>x[0]===n);let nv=view,fb=false;if(fbV&&ok(lastV[r]))nv=lastV[r];else if(!ok(view)){nv=ok(lastV[r])?lastV[r]:NAV[r][0][0];fb=true}fbV=fb;if(nv!==view)q='';view=nv;render();window.scrollTo(0,0)}
 function go(v){view=v;fbV=false;q='';render()}
-function render(){const same=render.v===view,y=window.scrollY,ks=[].map.call(document.querySelectorAll('#main .kc'),e=>e.scrollTop),ms=document.querySelector('#md')?document.querySelector('#md').scrollTop:0;recalc();renderSide();$('#main').innerHTML=({clientes:vC,pedidos:vP,producao:vProd,estoque:vE,receber:vR})[view]();render.v=view;if(same){window.scrollTo(0,y);document.querySelectorAll('#main .kc').forEach((e,i)=>{if(ks[i])e.scrollTop=ks[i]})}}
+function skKey(e,cnt){const k=e.getAttribute('data-sk');if(k)return k;const c=(typeof e.className==='string'&&e.className.split(' ')[0])||e.tagName;cnt[c]=(cnt[c]||0)+1;return c+'#'+cnt[c]}
+function scrollKeys(){const m={},cnt={};document.querySelectorAll('#main *').forEach(e=>{const k=skKey(e,cnt);if(e.scrollTop||e.scrollLeft)m[k]=[e.scrollTop,e.scrollLeft]});return m}
+function scrollRestore(m){if(!Object.keys(m).length)return;const cnt={};document.querySelectorAll('#main *').forEach(e=>{const v=m[skKey(e,cnt)];if(v){e.scrollTop=v[0];e.scrollLeft=v[1]}})}
+function render(){const same=render.v===view,y=window.scrollY,sk=same?scrollKeys():{};recalc();renderSide();$('#main').innerHTML=({clientes:vC,pedidos:vP,producao:vProd,estoque:vE,receber:vR})[view]();render.v=view;if(same){window.scrollTo(0,y);scrollRestore(sk)}}
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>{t.style.display='none'},2400)}
 let lockM=false;
 function open(h,w,lk){$('#md').innerHTML=h;$('#md').style.maxWidth=w?w+'px':'';lockM=!!lk;$('#ov').classList.add('on')}
@@ -1009,7 +1040,7 @@ const uT2=o=>o.it.length+(o.it.length===1?' item':' itens')+' · '+o.it.reduce((
 function pcard(o){
  const c=cof(o),pv=prev(o),done=o.it.filter(([i])=>o.chk[i]).length,uD=o.it.reduce((s,r)=>s+dnOf(o,r),0),uT=o.it.reduce((s,r)=>s+r[1],0),pc=Math.round(uD/uT*100),canAct=role==='producao';
  const gs=grp(o),mc=!pcl['o'+o.id];
- const list='<div class="il">'+gs.map(g=>{const dn=g.idx.filter(i=>o.chk[o.it[i][0]]).length;const pk=o.id+'|'+g.f.k+'|'+g.m,mn=!pcl[pk];return '<div class="gh'+(g.sz?' sz':'')+'"><span'+(o.st===2&&dn<g.idx.length?' class="rd"':'')+'>'+gname(g)+'</span><span>'+(o.st===2?dn+' de '+g.idx.length+' montados':g.q+' un'+gqs(o,g))+'</span><span class="gb"><button class="btn g s" aria-expanded="'+(mn?'false':'true')+'" onclick="togP(\''+pk+'\')">'+(mn?'Abrir':'Minimizar')+'</button></span></div>'+(mn?'':g.idx.map(i=>{const pi=o.it[i][0],n=o.it[i][1];if(o.st===2){const d=dnOf(o,o.it[i]);return '<label><input type="checkbox" '+(o.chk[pi]?'checked':'')+(canAct?'':' disabled')+' onchange="tgl('+o.id+','+pi+')"><span style="flex:1">'+n+'× '+esc(prod(pi).v)+'</span><span class="mu" style="white-space:nowrap">prontos <input type="number" aria-label="Quantas unidades de '+esc(prod(pi).v)+' já estão prontas" min="0" max="'+n+'" value="'+d+'" '+(canAct?'':'disabled ')+'style="width:60px;padding:4px 6px;min-height:0" onclick="event.stopPropagation()" onchange="setDn('+o.id+','+pi+',this.value)"> de '+n+(d<n?' · <b style="color:var(--tx)">faltam '+(n-d)+'</b>':' · ✓')+'</span></label>'}return '<div>'+n+'× '+esc(prod(pi).v)+'</div>'}).join('')) }).join('')+'</div>';
+ const list='<div class="il" data-sk="il'+o.id+'">'+gs.map(g=>{const dn=g.idx.filter(i=>o.chk[o.it[i][0]]).length;const pk=o.id+'|'+g.f.k+'|'+g.m,mn=!pcl[pk];return '<div class="gh'+(g.sz?' sz':'')+'"><span'+(o.st===2&&dn<g.idx.length?' class="rd"':'')+'>'+gname(g)+'</span><span>'+(o.st===2?dn+' de '+g.idx.length+' montados':g.q+' un'+gqs(o,g))+'</span><span class="gb"><button class="btn g s" aria-expanded="'+(mn?'false':'true')+'" onclick="togP(\''+pk+'\')">'+(mn?'Abrir':'Minimizar')+'</button></span></div>'+(mn?'':g.idx.map(i=>{const pi=o.it[i][0],n=o.it[i][1];if(o.st===2){const d=dnOf(o,o.it[i]);return '<label><input type="checkbox" '+(o.chk[pi]?'checked':'')+(canAct?'':' disabled')+' onchange="tgl('+o.id+','+pi+')"><span style="flex:1">'+n+'× '+esc(prod(pi).v)+'</span><span class="mu" style="white-space:nowrap">prontos <input type="number" aria-label="Quantas unidades de '+esc(prod(pi).v)+' já estão prontas" min="0" max="'+n+'" value="'+d+'" '+(canAct?'':'disabled ')+'style="width:60px;padding:4px 6px;min-height:0" onclick="event.stopPropagation()" onchange="setDn('+o.id+','+pi+',this.value)"> de '+n+(d<n?' · <b style="color:var(--tx)">faltam '+(n-d)+'</b>':' · ✓')+'</span></label>'}return '<div>'+n+'× '+esc(prod(pi).v)+'</div>'}).join('')) }).join('')+'</div>';
  let btn='';
  const ini=canAct&&o.st===1?'<button class="btn s go" onclick="iniP('+o.id+')">Iniciar produção</button>':'';
  if(canAct&&o.st===2)btn='<div class="act" style="margin:0"><button class="btn g s" onclick="allP('+o.id+')">Marcar todos</button><button class="btn g s" '+(o.undo?'':'disabled ')+'aria-label="Desfazer marcar todos" title="Desfazer: voltar ao que estava marcado antes" onclick="undoP('+o.id+')">↶</button><button class="btn" '+(done===o.it.length?'':'disabled')+' onclick="finP('+o.id+')">Pronto para envio</button></div>';
