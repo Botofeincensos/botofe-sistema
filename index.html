@@ -1248,9 +1248,12 @@ async function entrar(){
  $('#lgb').disabled=true;lgMsg('Entrando…',true);
  try{
   let email=u;
-  if(u.indexOf('@')<0){const r=await sb('/rest/v1/rpc/email_por_apelido',{m:'POST',b:{a:u},anon:1});const j=r.ok?await r.json():null;email=j||null;if(!email){$('#lgb').disabled=false;return lgMsg('Apelido ou senha incorretos.')}}
+  if(u.indexOf('@')<0){const r=await sb('/rest/v1/rpc/email_por_apelido',{m:'POST',b:{a:u},anon:1});let j=null;try{j=await r.json()}catch(e){}
+   if(!r.ok){$('#lgb').disabled=false;return lgMsg('Erro ao procurar o apelido (código '+r.status+(j&&j.message?': '+j.message:'')+'). Tente entrar pelo e-mail.')}
+   email=typeof j==='string'?j:null;if(!email){$('#lgb').disabled=false;return lgMsg('Apelido não encontrado. Confira o apelido ou entre pelo e-mail.')}}
   const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:s})});
-  if(!r.ok){$('#lgb').disabled=false;return lgMsg('E-mail/apelido ou senha incorretos.')}
+  if(!r.ok){let e={};try{e=await r.json()}catch(x){}const c=e.error_code||e.error||'';$('#lgb').disabled=false;
+   return lgMsg(c==='email_not_confirmed'?'Este e-mail ainda não foi confirmado no Supabase (marque Auto Confirm User).':c==='invalid_credentials'||c==='invalid_grant'?'Senha incorreta para '+email+'.':'Não foi possível entrar (código '+r.status+(c?' · '+c:'')+(e.msg||e.message?' · '+(e.msg||e.message):'')+').')}
   const j=await r.json();sess={access_token:j.access_token,refresh_token:j.refresh_token,uid:j.user.id};lsSet(SKEY,JSON.stringify(sess));
   await iniciar()
  }catch(e){$('#lgb').disabled=false;lgMsg('Sem conexão com o servidor. Verifique a internet e tente de novo.')}}
