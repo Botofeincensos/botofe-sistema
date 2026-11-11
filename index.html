@@ -890,7 +890,12 @@ async function pdfBuild(o,lg){
   if(y>H-150){np();hd()}
   Rc(M,y,W-2*M,20,.95);Ln(M,y,W-M,y,1,0);
   T(M+8,y+14,gname(g),10.5,true);T(350,y+14,g.q+' un',10,true,'r');{const ps=g.idx.map(i=>ep(o,o.it[i]));if(ps.every(x=>Math.abs(x-ps[0])<.005))T(452,y+14,rs(ps[0]),10,false,'r')}T(W-M-8,y+14,rs(g.v),10.5,true,'r');y+=20;
-  {const sm=g.idx.map(i=>o.it[i][1]+' '+prod(o.it[i][0]).v);let ln='';const ls=[];sm.forEach(s=>{const c2=ln?ln+', '+s:s;if(ln&&pdfW(c2,10,false)>W-2*M-24){ls.push(ln+',');ln=s}else ln=c2});if(ln)ls.push(ln);ls.forEach(s=>{T(M+8,y+12,s,10,false,'l',.05);y+=14});y+=3}
+  {const sub=[];g.idx.forEach(i=>{const p=ep(o,o.it[i]);let b=sub.find(x=>Math.abs(x.p-p)<.005);if(!b){b={p:p,ix:[]};sub.push(b)}b.ix.push(i)});
+   const mix=sub.length>1,lim=mix?300-M-16:W-2*M-24;
+   sub.forEach(b=>{const sm=b.ix.map(i=>o.it[i][1]+' '+prod(o.it[i][0]).v);let ln='';const ls=[];sm.forEach(s=>{const c2=ln?ln+', '+s:s;if(ln&&pdfW(c2,10,false)>lim){ls.push(ln+',');ln=s}else ln=c2});if(ln)ls.push(ln);
+    if(y>H-80){np();hd()}
+    if(mix){const q=b.ix.reduce((t,i)=>t+o.it[i][1],0);T(350,y+12,q+' un',10,false,'r',.05);T(452,y+12,rs(b.p),10,false,'r',.05);T(W-M-8,y+12,rs(q*b.p),10,false,'r',.05)}
+    ls.forEach(s=>{T(M+8,y+12,s,10,false,'l',.05);y+=14})});y+=3}
   Ln(M,y,W-M,y,.4,.85);
  });
  if((o.br||[]).length){
