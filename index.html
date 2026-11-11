@@ -239,7 +239,7 @@ body.lg-on .app{display:none}
 .lote .lh b{font-size:17px}.lote .lh .mu b{font-size:inherit}
 .lote .lk2{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
 .lote .lg{border-top:2px solid var(--tx);margin-top:10px}
-.lote .lgh{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;font-weight:700;background:var(--soft)}
+.lote .lgh{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;padding:10px 8px;min-height:44px;font:inherit;font-weight:700;color:inherit;background:var(--soft);border:0;border-radius:0;text-align:left;cursor:pointer}.lote .lgn small{font-weight:400}.lote .lgh>span:last-child{white-space:nowrap}
 .lote .lr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid var(--bd)}
 .lote .lv{display:flex;flex-direction:column;min-width:0}.lote .lo{font-size:12px}
 .lote .lf{white-space:nowrap;font-size:15px}.lote .lf b{font-size:18px;color:var(--er)}
@@ -249,6 +249,7 @@ body.lg-on .app{display:none}
 .lote .lc{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .lote .lc input[type=number]{width:62px;padding:6px;text-align:center;border:1px solid var(--bd);border-radius:8px;font:inherit}
 .lote .lf{margin-left:auto}
+html{overflow-anchor:none}
 </style>
 
 <div id="lg"><form class="bx" onsubmit="entrar();return false"><img id="lgimg" alt="Boto Fé Incensos"><h1>Entrar no sistema</h1>
@@ -348,7 +349,11 @@ function go(v){view=v;fbV=false;q='';render()}
 function skKey(e,cnt){const k=e.getAttribute('data-sk');if(k)return k;const c=(typeof e.className==='string'&&e.className.split(' ')[0])||e.tagName;cnt[c]=(cnt[c]||0)+1;return c+'#'+cnt[c]}
 function scrollKeys(){const m={},cnt={};document.querySelectorAll('#main *').forEach(e=>{const k=skKey(e,cnt);if(e.scrollTop||e.scrollLeft)m[k]=[e.scrollTop,e.scrollLeft]});return m}
 function scrollRestore(m){if(!Object.keys(m).length)return;const cnt={};document.querySelectorAll('#main *').forEach(e=>{const v=m[skKey(e,cnt)];if(v){e.scrollTop=v[0];e.scrollLeft=v[1]}})}
-function render(){const same=render.v===view,y=window.scrollY,sk=same?scrollKeys():{};recalc();renderSide();$('#main').innerHTML=({clientes:vC,pedidos:vP,producao:vProd,estoque:vE,receber:vR})[view]();render.v=view;if(same){window.scrollTo(0,y);scrollRestore(sk)}}
+let ancEl=null,ancT=0;
+['pointerdown','click','change','focusin'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target&&e.target.closest&&e.target.closest('[onclick],[onchange]');if(t){ancEl=t;ancT=Date.now()}},true));
+function ancGet(){if(!ancEl||Date.now()-ancT>4000||!document.contains(ancEl)||!ancEl.closest('#main'))return null;const at=ancEl.hasAttribute('onclick')?'onclick':'onchange';return {at:at,v:ancEl.getAttribute(at),top:ancEl.getBoundingClientRect().top}}
+function ancFix(a){if(!a)return;const el=[].find.call(document.querySelectorAll('#main ['+a.at+']'),e=>e.getAttribute(a.at)===a.v);if(!el)return;const d=el.getBoundingClientRect().top-a.top;if(Math.abs(d)>1)window.scrollBy(0,d);ancEl=el}
+function render(){const same=render.v===view,y=window.scrollY,sk=same?scrollKeys():{},anc=same?ancGet():null;recalc();renderSide();$('#main').innerHTML=({clientes:vC,pedidos:vP,producao:vProd,estoque:vE,receber:vR})[view]();render.v=view;if(same){window.scrollTo(0,y);scrollRestore(sk);ancFix(anc)}}
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>{t.style.display='none'},2400)}
 let lockM=false;
 function open(h,w,lk){$('#md').innerHTML=h;$('#md').style.maxWidth=w?w+'px':'';lockM=!!lk;$('#ov').classList.add('on')}
@@ -1088,11 +1093,14 @@ function vLote(){
  if(!L.length)return h+'<p class="mu" style="margin:8px 0 0">Nenhum pedido em produção.</p></section>';
  FAM.forEach(f=>{f.mod.forEach(md=>{const ps=P.filter(p=>p.f===f.k&&p.m===md.n&&m[p.id]);if(!ps.length)return;
   let gn=0,gd=0;ps.forEach(p=>{gn+=m[p.id].n;gd+=m[p.id].d});
-  h+='<div class="lg'+(gn-gd?'':' ok')+'"><div class="lgh"><span>'+esc(f.n+(f.mod.length>1?' · '+md.n:''))+'</span><span>'+(gn-gd?'faltam <b>'+(gn-gd)+'</b> de '+gn:'✓ completo · '+gn)+'</span></div>'+
-   ps.map(p=>{const x=m[p.id],fa=x.n-x.d,ok2=x.n2>0&&x.d>=x.n2;
+  const gk=f.k+'|'+md.n,op=!!loteOpen[gk];
+  h+='<div class="lg'+(gn-gd?'':' ok')+'"><button type="button" class="lgh" aria-expanded="'+op+'" onclick="loteTg(\''+gk.replace(/'/g,"\\'")+'\')"><span class="lgn">'+(op?'▾ ':'▸ ')+esc(f.n+(f.mod.length>1?' · '+md.n:''))+'<small class="mu"> · '+ps.length+(ps.length===1?' variedade':' variedades')+'</small></span><span>'+(gn-gd?'faltam <b>'+(gn-gd)+'</b> de '+gn:'✓ completo · '+gn)+'</span></button>'+
+   (!op?'':ps.map(p=>{const x=m[p.id],fa=x.n-x.d,ok2=x.n2>0&&x.d>=x.n2;
     const ctl=x.n2?'<span class="lc"><input type="number" inputmode="numeric" min="0" max="'+x.n2+'" value="'+x.d+'" aria-label="Feitos de '+esc(p.v)+'"'+(can?'':' disabled')+' onchange="loteSet('+p.id+',this.value)"><input type="checkbox" '+(ok2?'checked':'')+(can?'':' disabled')+' aria-label="'+esc(p.v)+' pronto" onchange="loteSet('+p.id+',this.checked?'+x.n2+':0)"></span>':'';
-    return '<div class="lr'+(fa?'':' ok')+'"><span class="lv"><span><span class="ln">'+esc(p.v)+'</span>'+(x.b?' <small class="mu">(+'+x.b+' brinde)</small>':'')+'</span><small class="mu lo">'+x.os.join(' · ')+'</small></span><span class="lf">'+(fa?'<b>'+fa+'</b>':'✓')+'<small class="mu"> de '+x.n+'</small></span>'+ctl+'</div>'}).join('')+'</div>'})});
+    return '<div class="lr'+(fa?'':' ok')+'"><span class="lv"><span><span class="ln">'+esc(p.v)+'</span>'+(x.b?' <small class="mu">(+'+x.b+' brinde)</small>':'')+'</span><small class="mu lo">'+x.os.join(' · ')+'</small></span><span class="lf">'+(fa?'<b>'+fa+'</b>':'✓')+'<small class="mu"> de '+x.n+'</small></span>'+ctl+'</div>'}).join(''))+'</div>'})});
  return h+'</section>'}
+let loteOpen={};
+function loteTg(k){loteOpen[k]=!loteOpen[k];render()}
 function loteSet(pid,v){let n=Math.round(+String(v).replace(',','.'));if(isNaN(n)||n<0)n=0;
  const L=O.filter(o=>o.st===2&&o.it.some(r=>r[0]===pid)).sort((a,b)=>a.id-b.id);
  L.forEach(o=>{const r=o.it.find(a=>a[0]===pid),d=Math.min(r[1],n);n-=d;delete o.undo;o.dn=o.dn||{};o.dn[pid]=d;o.chk[pid]=d>=r[1]});render()}
