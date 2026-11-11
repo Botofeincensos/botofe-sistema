@@ -245,6 +245,10 @@ body.lg-on .app{display:none}
 .lote .lf{white-space:nowrap;font-size:15px}.lote .lf b{font-size:18px;color:var(--er)}
 .lote .ok{color:var(--ok)}.lote .lr.ok .ln{text-decoration:line-through}
 .lote .lg.ok .lgh{color:var(--ok)}
+.lote .lt{font-size:13px;margin:0 0 6px}
+.lote .lc{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.lote .lc input[type=number]{width:62px;padding:6px;text-align:center;border:1px solid var(--bd);border-radius:8px;font:inherit}
+.lote .lf{margin-left:auto}
 </style>
 
 <div id="lg"><form class="bx" onsubmit="entrar();return false"><img id="lgimg" alt="Boto Fé Incensos"><h1>Entrar no sistema</h1>
@@ -1074,18 +1078,24 @@ function vProd(){
 }
 let loteOn=false,loteIni=false;
 function vLote(){
- const L=O.filter(o=>o.st===2||(loteIni&&o.st===1)),m={};
- L.forEach(o=>{o.it.forEach(r=>{const x=m[r[0]]||(m[r[0]]={n:0,d:0,b:0,os:[]});const d=o.st===2?dnOf(o,r):0;x.n+=r[1];x.d+=d;x.os.push('#'+o.id+' '+d+'/'+r[1])});
-  (o.br||[]).forEach(r=>{const x=m[r[0]]||(m[r[0]]={n:0,d:0,b:0,os:[]});x.b+=r[1]})});
+ const L=O.filter(o=>o.st===2||(loteIni&&o.st===1)),m={},can=role==='producao';
+ L.forEach(o=>{o.it.forEach(r=>{const x=m[r[0]]||(m[r[0]]={n:0,d:0,b:0,n2:0,os:[]});const d=o.st===2?dnOf(o,r):0;x.n+=r[1];x.d+=d;if(o.st===2)x.n2+=r[1];x.os.push('#'+o.id+' '+d+'/'+r[1])});
+  (o.br||[]).forEach(r=>{const x=m[r[0]]||(m[r[0]]={n:0,d:0,b:0,n2:0,os:[]});x.b+=r[1]})});
  let tn=0,td=0;Object.keys(m).forEach(k=>{tn+=m[k].n;td+=m[k].d});
  let h='<section class="lote" aria-label="Lista do lote"><div class="lh"><div><b>Lista do lote</b><div class="mu">'+L.length+(L.length===1?' pedido':' pedidos')+' · faltam <b>'+(tn-td)+'</b> de '+tn+' unidades</div></div>'+
-  '<label class="ck lk2"><input type="checkbox" '+(loteIni?'checked':'')+' onchange="loteIni=this.checked;render()"> Incluir pedidos a iniciar</label></div>';
+  '<label class="ck lk2"><input type="checkbox" '+(loteIni?'checked':'')+' onchange="loteIni=this.checked;render()"> Incluir pedidos a iniciar</label></div>'+
+  (can?'<p class="mu lt">Marque a caixa quando a variedade inteira estiver pronta, ou informe quantas já foram feitas. Os pedidos são abatidos do mais antigo para o mais novo.</p>':'<p class="mu lt">Para marcar o que foi feito, troque para o perfil Produção.</p>');
  if(!L.length)return h+'<p class="mu" style="margin:8px 0 0">Nenhum pedido em produção.</p></section>';
  FAM.forEach(f=>{f.mod.forEach(md=>{const ps=P.filter(p=>p.f===f.k&&p.m===md.n&&m[p.id]);if(!ps.length)return;
   let gn=0,gd=0;ps.forEach(p=>{gn+=m[p.id].n;gd+=m[p.id].d});
   h+='<div class="lg'+(gn-gd?'':' ok')+'"><div class="lgh"><span>'+esc(f.n+(f.mod.length>1?' · '+md.n:''))+'</span><span>'+(gn-gd?'faltam <b>'+(gn-gd)+'</b> de '+gn:'✓ completo · '+gn)+'</span></div>'+
-   ps.map(p=>{const x=m[p.id],fa=x.n-x.d;return '<div class="lr'+(fa?'':' ok')+'"><span class="lv"><span><span class="ln">'+esc(p.v)+'</span>'+(x.b?' <small class="mu">(+'+x.b+' brinde)</small>':'')+'</span><small class="mu lo">'+x.os.join(' · ')+'</small></span><span class="lf">'+(fa?'<b>'+fa+'</b>':'✓')+'<small class="mu"> de '+x.n+'</small></span></div>'}).join('')+'</div>'})});
+   ps.map(p=>{const x=m[p.id],fa=x.n-x.d,ok2=x.n2>0&&x.d>=x.n2;
+    const ctl=x.n2?'<span class="lc"><input type="number" inputmode="numeric" min="0" max="'+x.n2+'" value="'+x.d+'" aria-label="Feitos de '+esc(p.v)+'"'+(can?'':' disabled')+' onchange="loteSet('+p.id+',this.value)"><input type="checkbox" '+(ok2?'checked':'')+(can?'':' disabled')+' aria-label="'+esc(p.v)+' pronto" onchange="loteSet('+p.id+',this.checked?'+x.n2+':0)"></span>':'';
+    return '<div class="lr'+(fa?'':' ok')+'"><span class="lv"><span><span class="ln">'+esc(p.v)+'</span>'+(x.b?' <small class="mu">(+'+x.b+' brinde)</small>':'')+'</span><small class="mu lo">'+x.os.join(' · ')+'</small></span><span class="lf">'+(fa?'<b>'+fa+'</b>':'✓')+'<small class="mu"> de '+x.n+'</small></span>'+ctl+'</div>'}).join('')+'</div>'})});
  return h+'</section>'}
+function loteSet(pid,v){let n=Math.round(+String(v).replace(',','.'));if(isNaN(n)||n<0)n=0;
+ const L=O.filter(o=>o.st===2&&o.it.some(r=>r[0]===pid)).sort((a,b)=>a.id-b.id);
+ L.forEach(o=>{const r=o.it.find(a=>a[0]===pid),d=Math.min(r[1],n);n-=d;delete o.undo;o.dn=o.dn||{};o.dn[pid]=d;o.chk[pid]=d>=r[1]});render()}
 function iniP(id){ord(id).st=2;render();toast('Produção iniciada no pedido #'+id)}
 const dnOf=(o,r)=>o.chk[r[0]]?r[1]:Math.min(r[1],Math.max(0,((o.dn||{})[r[0]])||0));
 function setDn(id,pi,v){const o=ord(id),r=o.it.find(a=>a[0]===pi);if(!r)return;let n=Math.round(+String(v).replace(',','.'));if(isNaN(n)||n<0)n=0;if(n>r[1])n=r[1];delete o.undo;o.dn=o.dn||{};o.dn[pi]=n;o.chk[pi]=n>=r[1];render()}
