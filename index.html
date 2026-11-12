@@ -358,7 +358,8 @@ const cmBox=(o,w)=>{const L=o.cm||[],op=!!pcl['cm'+w+o.id];return '<div class="s
 function togCm(id,w){pcl['cm'+w+id]=!pcl['cm'+w+id];render();if(w==='m')fO(id)}
 function addCm(id,w){const o=ord(id),e=$('#cm'+w+id),v=e?e.value.trim():'';if(!v)return toast('Escreva o comentário');o.cm=o.cm||[];o.cm.push({a:role==='producao'?'Produção':'Gestão',d:TODAY,h:new Date().toTimeString().slice(0,5),t:v});render();if(w==='m')fO(id);toast('Comentário registrado: produção e gestão veem')}
 const du=(o,p)=>o.desc?Math.floor(p*(1-o.desc/100)*100+1e-6)/100:p;   /* unitário com o desconto do pedido (ex.: Pix 5%); corta a 3ª casa dos centavos, sem arredondar */
-function tot(o){const b=o.it.reduce((s,r)=>s+ep(o,r)*r[1],0);const d=o.desc?Math.round((b-o.it.reduce((s,r)=>s+du(o,ep(o,r))*r[1],0))*100)/100:0;const t=(b-d)*o.tx/100;const f=Math.max(0,+o.fr||0);return{b:b,d:d,t:t,l:b-d-t,f:f,c:b-d+f}}
+const dv=(o,v)=>o.desc?Math.floor(v*(1-o.desc/100)*100+1e-6)/100:v;   /* valor com desconto: calculado sobre o total (ex.: 405,00 × 0,95 = 384,75), corta além dos centavos */
+function tot(o){const b=o.it.reduce((s,r)=>s+ep(o,r)*r[1],0);const d=o.desc?Math.round((b-dv(o,b))*100)/100:0;const t=(b-d)*o.tx/100;const f=Math.max(0,+o.fr||0);return{b:b,d:d,t:t,l:b-d-t,f:f,c:b-d+f}}
 function prev(o){if(!o.conf)return '';const m=/^(\d+) dias/.exec(o.pz);return m?iso(addBD(pd(o.conf),+m[1])):''}
 const pzTxt=o=>o.pz==='Outro (manual)'?(o.pzTxt||'A combinar'):o.pz;
 const late=o=>{const p=prev(o);return !!p&&p<TODAY&&o.st<3};
@@ -949,13 +950,13 @@ async function pdfBuild(o,lg){
  grp(o).forEach(g=>{
   if(y>H-150){np();hd()}
   Rc(M,y,W-2*M,20,.95);Ln(M,y,W-M,y,1,0);
-  const gv=g.idx.reduce((t,i)=>t+du(o,ep(o,o.it[i]))*o.it[i][1],0);
+  const gv=dv(o,g.idx.reduce((t,i)=>t+ep(o,o.it[i])*o.it[i][1],0));
   T(M+8,y+14,gname(g),10.5,true);T(xQ,y+14,g.q+' un',10,true,'r');{const ps=g.idx.map(i=>ep(o,o.it[i]));if(ps.every(x=>Math.abs(x-ps[0])<.005)){T(xU,y+14,rs(ps[0]),10,false,'r');if(DS)T(xD,y+14,rs(du(o,ps[0])),10,true,'r')}}T(W-M-8,y+14,rs(gv),10.5,true,'r');y+=20;
   {const sub=[];g.idx.forEach(i=>{const p=ep(o,o.it[i]);let b=sub.find(x=>Math.abs(x.p-p)<.005);if(!b){b={p:p,ix:[]};sub.push(b)}b.ix.push(i)});
    const mix=sub.length>1,lim=mix?(DS?268:300)-M-16:W-2*M-24;
    sub.forEach(b=>{const sm=b.ix.map(i=>o.it[i][1]+' '+prod(o.it[i][0]).v);let ln='';const ls=[];sm.forEach(s=>{const c2=ln?ln+', '+s:s;if(ln&&pdfW(c2,10,false)>lim){ls.push(ln+',');ln=s}else ln=c2});if(ln)ls.push(ln);
     if(y>H-80){np();hd()}
-    if(mix){const q=b.ix.reduce((t,i)=>t+o.it[i][1],0);T(xQ,y+12,q+' un',10,false,'r',.05);T(xU,y+12,rs(b.p),10,false,'r',.05);if(DS)T(xD,y+12,rs(du(o,b.p)),10,true,'r',.05);T(W-M-8,y+12,rs(q*du(o,b.p)),10,false,'r',.05)}
+    if(mix){const q=b.ix.reduce((t,i)=>t+o.it[i][1],0);T(xQ,y+12,q+' un',10,false,'r',.05);T(xU,y+12,rs(b.p),10,false,'r',.05);if(DS)T(xD,y+12,rs(du(o,b.p)),10,true,'r',.05);T(W-M-8,y+12,rs(dv(o,q*b.p)),10,false,'r',.05)}
     ls.forEach(s=>{T(M+8,y+12,s,10,false,'l',.05);y+=14})});y+=3}
   Ln(M,y,W-M,y,.4,.85);
  });
@@ -1698,9 +1699,12 @@ const NFE_EM={xNome:'BOTOFE FABRICACAO E COMERCIO DE ARTIGOS RELIGIOSOS LTDA',xF
 const nx=s=>String(s==null?'':s).replace(/[|\r\n]+/g,' ').replace(/\s+/g,' ').trim();
 const n2=v=>(Math.round(v*100+1e-6)/100).toFixed(2);
 let nfd=null;
-function nfItens(o){const m={};o.it.forEach(r=>{const p=prod(r[0]),pr=du(o,ep(o,r)),k=p.f+'|'+p.m+'|'+pr.toFixed(2);
+function nfItens(o){const m={};o.it.forEach(r=>{const p=prod(r[0]),pr=ep(o,r),k=p.f+'|'+p.m+'|'+pr.toFixed(2);
  const g=m[k]||(m[k]={cod:CODP[p.f+'|'+p.m]||p.f.toUpperCase(),nome:p.fn+(p.ml?' '+p.m:''),ncm:p.ncm||NCMF[p.f]||'',un:pr,q:0,v:[]});g.q+=r[1];g.v.push(r[1]+' '+p.v)});
- return Object.keys(m).map(k=>{const g=m[k];return{cod:g.cod,nome:g.nome,ncm:g.ncm,un:g.un,q:g.q,vp:Math.round(g.un*g.q*100+1e-6)/100,inf:g.v.join(', ')+'.'}})}
+ const L=Object.keys(m).map(k=>{const g=m[k];return{cod:g.cod,nome:g.nome,ncm:g.ncm,un:o.desc?g.un*(1-o.desc/100):g.un,q:g.q,vp:dv(o,Math.round(g.un*g.q*100)/100),inf:g.v.join(', ')+'.'}});
+ if(L.length){const b=o.it.reduce((s,r)=>s+ep(o,r)*r[1],0),df=Math.round((dv(o,b)-L.reduce((s,x)=>s+x.vp,0))*100)/100;if(df)L[L.length-1].vp=Math.round((L[L.length-1].vp+df)*100)/100}
+ return L}
+const nu=v=>{let s=(Math.round(v*10000)/10000).toFixed(4);while(s.endsWith('0')&&s.split('.')[1].length>2)s=s.slice(0,-1);return s};
 function nfDraft(id){const o=ord(id),c=cof(o),cc=o.cli?cli(o.cli):null;
  const doc=String(o.doc||(cc&&cc.doc)||'').replace(/\D/g,''),cep=String(o.cep||(cc&&cc.cep)||'').replace(/\D/g,''),end=String(o.end||(cc&&cc.end)||''),cid=String(o.cid||(cc&&cc.cid)||'');
  const pt=end.split(' · '),cm=/^(.*?),\s*(\d+[A-Za-z]?)$/.exec((pt[0]||'').trim()),cu=/^(.*)\/([A-Za-z]{2})$/.exec(cid.trim());
@@ -1732,7 +1736,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  a('E05',d.lgr,d.nro||'S/N',d.cpl,d.bairro,d.ibge,d.mun,d.uf,d.cep,'1058','BRASIL',d.fone);
  d.items.forEach((x,i)=>{const n=i+1,nt=x.ncm==='33073000';
   a('H',n,x.inf);
-  a('I',x.cod,'SEM GTIN',x.nome,x.ncm,'','',k.cfop,'UN',x.q.toFixed(4),n2(x.un),n2(x.vp),'SEM GTIN','UN',x.q.toFixed(4),n2(x.un),k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'');
+  a('I',x.cod,'SEM GTIN',x.nome,x.ncm,'','',k.cfop,'UN',x.q.toFixed(4),nu(x.un),n2(x.vp),'SEM GTIN','UN',x.q.toFixed(4),nu(x.un),k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'');
   a('M','');a('N');a('N10d','0','102');
   a('Q');if(nt)a('Q04','07');else a('Q02','99','0.00','0.0000','0.00');
   a('S');if(nt)a('S04','07');else a('S02','99','0.00','0.0000','0.00')});
