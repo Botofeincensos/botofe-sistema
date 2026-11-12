@@ -1,6 +1,6 @@
 // Boto Fé · Função "nfemail" (Supabase Edge Function)
 // Faz a ponte entre o sistema e a API do NFeMail.
-// A chave do NFeMail fica SÓ nos segredos do Supabase (NFEMAIL_CNPJ e NFEMAIL_KEY); nunca no site nem no GitHub.
+// A chave do NFeMail fica SÓ no segredo NFEMAIL_KEY do Supabase; nunca no site nem no GitHub. O CNPJ já vem preenchido.
 // Só usuários logados com papel "gestao" podem usar. Só os caminhos da lista ALLOW são aceitos.
 
 const CORS = {
@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
     const { method = "GET", path = "", query = {}, body = null } = await req.json();
     const m = String(method).toUpperCase(), pa = String(path).replace(/^\/+/, "");
     if (!ALLOW.some(([a, b]) => a === m && b.toLowerCase() === pa.toLowerCase())) return json({ erro: "Chamada não permitida: " + m + " " + pa }, 400);
-    const CNPJ = (Deno.env.get("NFEMAIL_CNPJ") ?? "").replace(/\D/g, ""), KEY = Deno.env.get("NFEMAIL_KEY") ?? "";
-    if (!CNPJ || !KEY) return json({ erro: "Faltam os segredos NFEMAIL_CNPJ e NFEMAIL_KEY no Supabase." }, 500);
+    const CNPJ = (Deno.env.get("NFEMAIL_CNPJ") ?? "41134556000158").replace(/\D/g, ""), KEY = Deno.env.get("NFEMAIL_KEY") ?? "";   // CNPJ da Botofé (público)
+    if (!KEY) return json({ erro: "Falta o segredo NFEMAIL_KEY no Supabase (Edge Functions → Secrets)." }, 500);
     const base = Deno.env.get("NFEMAIL_URL") ?? "https://api.nfemail.com.br/";
     const url = new URL(pa, base.endsWith("/") ? base : base + "/");
     for (const [k, v] of Object.entries(query ?? {})) if (v !== null && v !== undefined && v !== "") url.searchParams.set(k, String(v));
