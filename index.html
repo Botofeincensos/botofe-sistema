@@ -279,7 +279,7 @@ html{overflow-anchor:none}
 .pill.ok2{background:#e6f4ea;color:#14532d}
 .dfm{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.dfm>input,.dfm>select{padding:9px 10px;border:1px solid var(--bd);border-radius:10px;font:inherit;min-height:40px;background:#fff}.dfm>#dds{flex:1 1 200px}.dfm>#dvl{width:120px}
 .din{width:100%;padding:6px 8px;border:1px solid transparent;border-radius:8px;font:inherit;background:transparent}.din:hover,.din:focus{border-color:var(--bd);background:#fff}.din.r{text-align:right}.din.warn{border-color:var(--er)}
-.cu .gr td{background:var(--soft);font-weight:700}.cu .gr .btn{margin-left:10px;font-weight:400}
+.cu .gr td{background:var(--soft);font-weight:700}.cu .grw{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cu .grw>span{margin-right:auto}.cu .gr .btn{font-weight:400}.cu .lkb.on{background:#fff7e6;border-color:#c9a96e}.cu .cul{display:inline-block;padding:6px 8px}.cu td.c,.cu th.c{text-align:center}
 details.fd summary{cursor:pointer;font-weight:700}
 @media(max-width:760px){.fgrid{grid-template-columns:1fr}.fd{padding:12px}.ct{font-size:14px}}
 </style>
@@ -1480,12 +1480,15 @@ function dDel(id){D=D.filter(z=>z.id!==id);render();toast('Despesa excluída')}
 function dCopy(m){const ex=new Set(D.filter(x=>x.m===m).map(x=>x.ds.toLowerCase()));let n=0;D.filter(x=>x.m===addM(m,-1)&&x.rec&&!ex.has(x.ds.toLowerCase())).forEach(x=>{D.push({id:++dN,m:m,ds:x.ds,cat:x.cat,v:x.v,rec:true});n++});render();toast(n?n+' despesas copiadas':'Nada novo para copiar')}
 function dModelo(m){DMOD.forEach(x=>D.push({id:++dN,m:m,ds:x[0],cat:x[1],v:x[2],rec:true}));render();toast('Modelo aplicado: confira os valores e descrições')}
 /* ---- custos e impostos ---- */
+let cuOpen={},cuNoImp={};
 function finCustos(){
+ const im=(+cfg().imp||0)/100;
  let h='<div class="card fd"><h3>Imposto sobre o faturamento</h3><div class="dfm"><label class="fsel"><span>Alíquota (%)</span><input type="number" step="0.001" min="0" value="'+cfg().imp+'" onchange="cfg().imp=Math.max(0,+String(this.value).replace(\',\',\'.\')||0);render()" style="width:110px"></label><span class="mu">Simples Nacional: percentual efetivo sobre o faturamento recebido. Ajuste quando mudar a faixa.</span></div></div>'+
-  '<h3 class="fh">Custo unitário dos produtos</h3><p class="mu sm">Valores iniciais da planilha "Custos unitários" (banhos pela Projeção 2026). Margem calculada sobre o preço da tabela, antes de imposto.</p><div class="card tw"><table class="fx cu"><thead><tr><th style="width:34%">Produto</th><th class="r" style="width:18%">Custo (R$)</th><th class="r" style="width:16%">Atacado</th><th class="r" style="width:10%">Margem</th><th class="r" style="width:12%">Varejo</th><th class="r" style="width:10%">Margem</th></tr></thead><tbody>';
- FAM.forEach(f=>f.mod.forEach(md=>{const ps=P.filter(p=>p.f===f.k&&p.m===md.n);if(!ps.length)return;
-  h+='<tr class="gr"><td colspan="6">'+esc(f.n+(f.mod.length>1?' · '+md.n:''))+' <button class="btn g s" onclick="cuAll(\''+f.k+'\',\''+md.n.replace(/'/g,"\\'")+'\')">Mesmo custo para todas</button></td></tr>'+
-  ps.map(p=>{const c=p.cu==null?'':p.cu,mg=v=>v&&p.cu!=null?pct(v-p.cu,v):'—';return '<tr><td>'+esc(p.v)+'</td><td class="r"><input class="din r'+(p.cu==null?' warn':'')+'" type="number" step="0.01" min="0" value="'+c+'" placeholder="sem custo" aria-label="Custo de '+esc(pfull(p))+'" onchange="cuSet('+p.id+',this.value)"></td><td class="r">'+R(p.pr.Atacado||0)+'</td><td class="r">'+mg(p.pr.Atacado)+'</td><td class="r">'+R(p.pr.Varejo||0)+'</td><td class="r">'+mg(p.pr.Varejo)+'</td></tr>'}).join('')}));
+  '<h3 class="fh">Custo unitário dos produtos</h3><p class="mu sm">Valores iniciais da planilha "Custos unitários" (banhos pela Projeção 2026). Para alterar um custo, abra o cadeado 🔒 da categoria. Margem real = preço − custo − imposto; desmarque "Imposto" para ver a margem sem o imposto.</p><div class="card tw"><table class="fx cu"><thead><tr><th style="width:27%">Produto</th><th class="r" style="width:16%">Custo (R$)</th><th class="r" style="width:13%">Atacado</th><th class="r" style="width:10%">Margem</th><th class="r" style="width:13%">Varejo</th><th class="r" style="width:10%">Margem</th><th class="c" style="width:11%">Imposto</th></tr></thead><tbody>';
+ FAM.forEach(f=>f.mod.forEach(md=>{const ps=P.filter(p=>p.f===f.k&&p.m===md.n);if(!ps.length)return;const gk=f.k+'|'+md.n,op=!!cuOpen[gk],q=gk.replace(/'/g,"\\'");
+  h+='<tr class="gr"><td colspan="7"><span class="grw"><span>'+esc(f.n+(f.mod.length>1?' · '+md.n:''))+'</span><button class="btn g s lkb'+(op?' on':'')+'" aria-pressed="'+op+'" aria-label="'+(op?'Fechar cadeado':'Abrir cadeado para editar custos')+'" onclick="cuOpen[\''+q+'\']=!cuOpen[\''+q+'\'];render()">'+(op?'🔓 Aberto':'🔒 Fechado')+'</button>'+(op?'<button class="btn g s" onclick="cuAll(\''+f.k+'\',\''+md.n.replace(/'/g,"\\'")+'\')">Mesmo custo para todas</button>':'')+'</span></td></tr>'+
+  ps.map(p=>{const ti=!cuNoImp[p.id],c=p.cu==null?'':p.cu,mg=v=>v&&p.cu!=null?pct(v-p.cu-(ti?v*im:0),v):'—';
+   return '<tr><td>'+esc(p.v)+'</td><td class="r">'+(op?'<input class="din r'+(p.cu==null?' warn':'')+'" type="number" step="0.01" min="0" value="'+c+'" placeholder="sem custo" aria-label="Custo de '+esc(pfull(p))+'" onchange="cuSet('+p.id+',this.value)">':'<span class="cul'+(p.cu==null?' er':'')+'">'+(p.cu==null?'sem custo':R(+p.cu))+'</span>')+'</td><td class="r">'+R(p.pr.Atacado||0)+'</td><td class="r">'+mg(p.pr.Atacado)+'</td><td class="r">'+R(p.pr.Varejo||0)+'</td><td class="r">'+mg(p.pr.Varejo)+'</td><td class="c"><input type="checkbox" '+(ti?'checked':'')+' aria-label="Considerar imposto na margem de '+esc(pfull(p))+'" onchange="cuNoImp['+p.id+']=!this.checked;render()"></td></tr>'}).join('')}));
  return h+'</tbody></table></div>'}
 function cuSet(id,v){const p=prod(id);if(!p)return;v=String(v).trim();p.cu=v===''?null:Math.max(0,+(+v.replace(',','.')).toFixed(2));render()}
 function cuAll(fk,mn){const ps=P.filter(p=>p.f===fk&&p.m===mn),c=ps.find(p=>p.cu!=null);const v=prompt('Custo unitário para todas as variedades de '+(ps[0]?ps[0].fn:'')+' · '+mn+' (R$):',c?c.cu:'');if(v==null)return;const n=+String(v).replace(',','.');if(!(n>=0))return toast('Valor inválido');ps.forEach(p=>p.cu=+n.toFixed(2));render()}
@@ -1598,9 +1601,22 @@ async function atualizar(){
  const a=document.activeElement;if($('#ov').classList.contains('on')||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;
  lastPull=Date.now();const antes=JSON.stringify(snap);
  const rows=await buscar();if(!rows)return;aplicar(rows,false);
- if(JSON.stringify(snap)!==antes)render()}
+ if(JSON.stringify(snap)!==antes){histOff=true;render();histOff=false;hist=[fotoD()];redo=[]}}
 const _render=render;
-render=function(){_render();agendar()};
+let hist=[],redo=[],histOff=false;
+function fotoD(){const o={};Object.keys(COLS).forEach(c=>{o[c]=ser(c,COLS[c]())});return o}
+function histPush(){if(!perfil||histOff)return;const f=fotoD(),l=hist[hist.length-1];if(l&&Object.keys(f).every(c=>f[c]===l[c]))return;hist.push(f);if(hist.length>40)hist.shift();redo=[]}
+function histApply(f){Object.keys(COLS).forEach(c=>{const a=COLS[c](),n=JSON.parse(f[c]);a.length=0;n.forEach(x=>a.push(x))});
+ pid=P.reduce((s,p)=>Math.max(s,p.id),0);rcN=RC.reduce((s,r)=>Math.max(s,r.id),0);mvN=V.reduce((s,v)=>Math.max(s,v.id),0);dN=D.reduce((s,x)=>Math.max(s,x.id),0);
+ histOff=true;render();histOff=false}
+function desfazer(){if(hist.length<2)return toast('Nada para desfazer');redo.push(hist.pop());histApply(hist[hist.length-1]);toast('Ação desfeita (Ctrl+Y refaz)')}
+function refazer(){if(!redo.length)return toast('Nada para refazer');const f=redo.pop();hist.push(f);histApply(f);toast('Ação refeita')}
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=e.key.toLowerCase();if(k!=='z'&&k!=='y')return;
+ const a=document.activeElement;if(a&&(/^(TEXTAREA|SELECT)$/.test(a.tagName)||(a.tagName==='INPUT'&&!/^(checkbox|radio|button|submit)$/.test(a.type))))return;   /* dentro de um campo: desfazer do próprio campo */
+ if(!perfil||document.body.classList.contains('lg-on'))return;
+ if($('#ov').classList.contains('on')){e.preventDefault();return toast('Feche a janela aberta para desfazer')}
+ e.preventDefault();if(k==='y'||e.shiftKey)refazer();else desfazer()});
+render=function(){_render();histPush();agendar()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(perfil&&saveT){clearTimeout(saveT);gravar()}}else atualizar()});
 window.addEventListener('focus',atualizar);
 window.addEventListener('online',()=>{if(perfil)gravar()});
