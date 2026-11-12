@@ -1663,17 +1663,36 @@ async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render(
  nfMsg=r.ok?'✓ '+path+(n!=null?' ('+n+' registros)':' (resposta recebida)'):'✕ '+r.erro;
  nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
-/* dados do cliente no pedido (clique no nome) + copiar para o frete */
+/* dados do cliente no pedido (clique no nome): preenche o que falta (CEP→ViaCEP, CNPJ→BrasilAPI), permite editar e salvar no cadastro */
+const CDM={doc:'doc',tel:'lt',mail:'lm',cep:'cep',end:'end',cid:'cid'};
 function cdDados(o){const c=o.cli?cli(o.cli):null,x=(a,b)=>String(a||b||'').trim();
  return{nome:x(c&&c.n,o.nome),doc:x(o.doc,c&&c.doc),tel:x(o.lt,c&&c.tel),mail:x(o.lm,c&&c.mail),cep:x(o.cep,c&&c.cep),end:x(o.end,c&&c.end),cid:x(o.cid,c&&c.cid)}}
-const cdLn=(l,v,k)=>'<div class="row2" style="align-items:center;gap:8px;margin:3px 0"><span class="mu" style="min-width:86px">'+l+'</span><span style="flex:1;overflow-wrap:anywhere">'+(v?esc(v):'<span class="mu">— não cadastrado</span>')+'</span>'+(v?'<button class="btn g s" onclick="cdCopy('+k+')" aria-label="Copiar '+l+'">Copiar</button>':'')+'</div>';
-let cdTx=[];
-function cdBox(o){if(!pcl['cd'+o.id])return '';const d=cdDados(o);cdTx=[d.nome,d.doc,d.tel,d.cep,d.end,d.cid,d.mail];
- const fr=['Nome: '+d.nome,'CPF/CNPJ: '+d.doc,'Telefone: '+d.tel,'CEP: '+d.cep,'Endereço: '+[d.end,d.cid].filter(Boolean).join(' · ')].join('\n');cdTx.push(fr);
- return '<div class="sec" style="margin:8px 0"><h4>Dados do cliente · frete</h4>'+cdLn('Nome',d.nome,0)+cdLn('CPF / CNPJ',d.doc,1)+cdLn('Telefone',d.tel,2)+cdLn('CEP',d.cep,3)+cdLn('Endereço',d.end,4)+cdLn('Cidade/UF',d.cid,5)+cdLn('E-mail',d.mail,6)+
- '<div class="act"><button class="btn s" onclick="cdCopy(7)">Copiar dados para o frete</button></div></div>'}
-function togCd(id){pcl['cd'+id]=!pcl['cd'+id];fO(id)}
-function cdCopy(i){const t=cdTx[i]||'';try{navigator.clipboard.writeText(t).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
+const cdIn=(l,k,v,ph)=>'<div class="row2" style="align-items:center;gap:8px;margin:4px 0"><label class="mu" style="min-width:86px">'+l+'</label><input style="flex:1;min-width:0" value="'+esc(v)+'" placeholder="'+esc(ph||'')+'" aria-label="'+l+'" onchange="cdSet(\''+k+'\',this.value)">'+(v?'<button class="btn g s" onclick="cdCopy(\''+k+'\')" aria-label="Copiar '+l+'">Copiar</button>':'')+'</div>';
+let cdTx={},cdId=0,cdBusy=false,cdMsg='';
+function cdDif(o){const c=o.cli?cli(o.cli):null;if(!c)return false;const d=cdDados(o);return[['doc','doc'],['tel','tel'],['mail','mail'],['cep','cep'],['end','end'],['cid','cid']].some(a=>d[a[0]]&&d[a[0]]!==String(c[a[1]]||'').trim())}
+function cdBox(o){if(!pcl['cd'+o.id])return '';const d=cdDados(o);cdId=o.id;cdTx=Object.assign({},d,{frete:['Nome: '+d.nome,'CPF/CNPJ: '+d.doc,'Telefone: '+d.tel,'CEP: '+d.cep,'Endereço: '+[d.end,d.cid].filter(Boolean).join(' · ')].join('\n')});
+ const falta=!d.doc||!d.tel||!d.cep||!d.end||!d.cid;
+ return '<div class="sec" style="margin:8px 0"><h4>Dados do cliente · frete</h4><div class="row2" style="gap:8px;margin:4px 0"><span class="mu" style="min-width:86px">Nome</span><b style="flex:1">'+esc(d.nome)+'</b><button class="btn g s" onclick="cdCopy(\'nome\')">Copiar</button></div>'+
+ cdIn('CPF / CNPJ','doc',d.doc,'Digite para buscar o endereço pelo CNPJ')+cdIn('Telefone','tel',d.tel)+cdIn('CEP','cep',d.cep,'00000-000')+cdIn('Endereço','end',d.end,'Rua, número · bairro')+cdIn('Cidade/UF','cid',d.cid,'Cidade/UF')+cdIn('E-mail','mail',d.mail)+
+ '<p class="mu sm" style="margin:6px 0">'+esc(cdBusy?'Buscando dados…':(cdMsg||(falta?'Digite o CEP ou o CNPJ e o que faltar é preenchido sozinho. Você pode corrigir qualquer campo.':'Você pode corrigir qualquer campo.')))+'</p>'+
+ '<div class="act"><button class="btn s" onclick="cdCopy(\'frete\')">Copiar dados para o frete</button>'+(o.cli&&cdDif(o)?'<button class="btn g s" onclick="cdSave('+o.id+')">Salvar no cadastro do cliente</button>':(o.cli?'<span class="mu sm">✓ igual ao cadastro</span>':''))+'</div></div>'}
+function cdRe(id){render();if(pcl['cd'+id])fO(id)}
+function togCd(id){pcl['cd'+id]=!pcl['cd'+id];cdMsg='';fO(id);if(pcl['cd'+id])cdAuto(id)}
+function cdSet(k,v){const o=ord(cdId);if(!o)return;v=String(v).trim();if(k==='doc'){const n=v.replace(/\D/g,'');v=n.length===11?n.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'):n.length===14?n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'):v}
+ if(k==='cep'){const n=v.replace(/\D/g,'').slice(0,8);v=n.length>5?n.slice(0,5)+'-'+n.slice(5):n}
+ o[CDM[k]]=v;cdMsg='';cdRe(cdId);if(k==='cep'||k==='doc')cdAuto(cdId)}
+async function cdAuto(id){const o=ord(id);if(!o||cdBusy)return;const d=cdDados(o);let ch=false;
+ const put=(k,v)=>{if(v&&!cdDados(o)[k]){o[CDM[k]]=String(v).trim();ch=true}};
+ const cep=d.cep.replace(/\D/g,''),doc=d.doc.replace(/\D/g,'');cdBusy=true;
+ try{
+  if(cep.length===8&&(!d.end||!d.cid)){const j=await(await fetch('https://viacep.com.br/ws/'+cep+'/json/')).json();if(!j.erro){put('end',[j.logradouro,j.bairro].filter(Boolean).join(' · '));put('cid',j.localidade?j.localidade+(j.uf?'/'+j.uf:''):'')}}
+  if(doc.length===14&&(!cdDados(o).cep||!cdDados(o).end||!cdDados(o).cid||!d.tel||!d.mail)){const j=await(await fetch('https://brasilapi.com.br/api/cnpj/v1/'+doc)).json();
+   if(j&&j.cep){const c8=String(j.cep).replace(/\D/g,'');put('cep',c8.slice(0,5)+'-'+c8.slice(5));put('end',[[j.logradouro,j.numero].filter(Boolean).join(', '),j.bairro].filter(Boolean).join(' · '));put('cid',j.municipio?j.municipio+(j.uf?'/'+j.uf:''):'');put('tel',j.ddd_telefone_1);put('mail',j.email?String(j.email).toLowerCase():'')}}
+  cdMsg=ch?'Campos em branco preenchidos automaticamente. Confira, corrija se precisar e salve no cadastro.':''}
+ catch(e){cdMsg='Não consegui buscar os dados agora. Preencha manualmente.'}
+ cdBusy=false;if(ch||cdMsg)cdRe(id)}
+function cdSave(id){const o=ord(id),c=o&&o.cli?cli(o.cli):null;if(!c)return;const d=cdDados(o);['doc','tel','mail','cep','end','cid'].forEach(k=>{if(d[k])c[k]=d[k]});cdMsg='Cadastro do cliente atualizado.';cdRe(id);toast('Cadastro do cliente atualizado')}
+function cdCopy(k){const t=cdTx[k]||'';try{navigator.clipboard.writeText(t).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 /* ===== Gerar nota (emissão pelo NFeMail) ===== */
 const NFE_EM={xNome:'BOTOFE FABRICACAO E COMERCIO DE ARTIGOS RELIGIOSOS LTDA',xFant:'Maria Leticia Teixeira Santa Rosa',IE:'0804042300146',IM:'0804042300146',CNAE:'3299099',CRT:'1',CNPJ:'41134556000158',lgr:'Nucr Corrego do Torto Trecho 3',nro:'26',bairro:'Setor de Habitacoes Individuais Norte',cMun:'5300108',mun:'BRASILIA',UF:'DF',CEP:'71538500',fone:'61993071919'};
 const nx=s=>String(s==null?'':s).replace(/[|\r\n]+/g,' ').replace(/\s+/g,' ').trim();
