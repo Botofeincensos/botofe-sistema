@@ -1636,7 +1636,7 @@ setInterval(atualizar,60000);
 const CODP={'inc|Unidade':'INC','vela|100 g':'VG','vela|20 g':'VP','spray|60 ml':'SP60','spray|120 ml':'SP120','banho|Ziplock':'BZ','banho|Garrafa':'BG','esc|Unidade':'ESC','cha|Unidade':'CHA'};
 function codPadrao(p){const k=p.f+'|'+p.m,pre=CODP[k]||(p.f.slice(0,3)+(p.ml?String(p.m).replace(/\W/g,''):'')).toUpperCase();
  const g=P.filter(x=>x.f===p.f&&x.m===p.m).sort((a,b)=>a.id-b.id);return pre+'-'+String(g.indexOf(p)+1).padStart(2,'0')}
-const NCMF={inc:'33074100',vela:'34060000',banho:'33073000',esc:'33073000',cha:'09022000'};   /* NCM usados hoje no NFeMail; spray sem NCM cadastrado lá */
+const NCMF={inc:'33074100',vela:'34060000',spray:'33074900',banho:'33073000',esc:'33073000',cha:'09022000'};   /* NCM do NFeMail; spray 33074900 definido pelo Gabriel (12/11) */
 function codFill(){P.forEach(p=>{if(!p.cod)p.cod=codPadrao(p);if(p.ncm==null&&NCMF[p.f])p.ncm=NCMF[p.f]})}
 let nfProd=null;   /* produtos lidos do NFeMail (última consulta) */
 function nfMatch(p){if(!nfProd)return null;const v=nrm(p.v),fam={inc:'incenso',vela:'vela',spray:'spray',banho:'banho',esc:'escalda',cha:'cha'}[p.f]||nrm(p.fn);
