@@ -253,7 +253,7 @@ html{overflow-anchor:none}
 
 @media(max-width:375px){aside{padding-left:8px;padding-right:8px}.nav{font-size:10.5px}}
 /* Financeiro */
-.nfm{margin:10px 0 0;font-weight:700}.nfm.ok{color:var(--ok)}.nfm.er{color:var(--er)}.nfo{margin-top:10px}.nfo pre{max-height:420px;overflow:auto;background:#f6f5f2;border:1px solid var(--bd);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
+.nfm{margin:10px 0 0;font-weight:700}.nfm.ok{color:var(--ok)}.nfm.er{color:var(--er)}.nfo{margin-top:10px}.nfk .fsel{flex:1 1 320px}.nfk .fsel input{width:100%}.nfk .ok{color:var(--ok)}.nfk .er{color:var(--er)}.nfo pre{max-height:420px;overflow:auto;background:#f6f5f2;border:1px solid var(--bd);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
 .card.dtw{overflow:visible}.dt thead th:first-child{border-top-left-radius:14px}.dt thead th:last-child{border-top-right-radius:14px}
 @media(max-width:760px){.dt thead{display:none}.dt,.dt tbody{display:block}.dt tr{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"c c c" "d d d" "v m x";gap:4px 10px;padding:10px 12px;border-bottom:1px solid var(--bd)}
  .dt td{display:block;padding:0;border:0;width:auto!important}.dt td:nth-child(1){grid-area:c}.dt td:nth-child(2){grid-area:d}.dt td:nth-child(3){grid-area:v}.dt td:nth-child(4){grid-area:m;display:flex;align-items:center;gap:6px}.dt td:nth-child(4)::after{content:"mensal";font-size:13px;color:var(--mu)}.dt td:nth-child(5){grid-area:x}
@@ -1644,6 +1644,12 @@ async function nfe(method,path,query,body){
  if(!r.ok)return{ok:false,erro:r.status===404?'A função nfemail ainda não está instalada no Supabase.':(j.erro||j.message||j.msg||('Erro '+r.status))};
  return{ok:j.status>=200&&j.status<300,st:j.status,j:j,erro:j.status>=300?'NFeMail respondeu '+j.status+': '+(j.texto||JSON.stringify(j.dados||'')).slice(0,300):''}}
 let nfOut='',nfMsg='',nfBusy=false;
+let nfKeySt=undefined;
+async function nfKeyStatus(){try{const r=await sb('/rest/v1/rpc/status_chave_nfemail',{m:'POST',b:{}});nfKeySt=r.ok?await r.json():null}catch(e){nfKeySt=null}render()}
+async function nfKeySave(){const e=$('#nfk'),k=e?e.value.trim():'';if(k.length<10)return toast('Cole a chave de API do NFeMail');
+ nfMsg='Salvando a chave…';render();const r=await sb('/rest/v1/rpc/salvar_chave_nfemail',{m:'POST',b:{chave:k}});
+ if(!r.ok){let j={};try{j=await r.json()}catch(x){}nfMsg='✕ Não foi possível salvar a chave'+(j.message?': '+j.message:'');return render()}
+ nfMsg='✓ Chave salva. Agora clique em Testar conexão.';await nfKeyStatus()}
 async function nfTeste(){nfBusy=true;nfMsg='Testando…';render();const r=await nfe('GET','api/Produtos',{page:1,limit:1});nfBusy=false;
  nfMsg=r.ok?'✓ Conectado ao NFeMail.':'✕ '+r.erro;nfOut=r.j?JSON.stringify(r.j.dados!=null?r.j.dados:r.j,null,2):'';render()}
 async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render();const r=await nfe('GET',path,q);nfBusy=false;
@@ -1651,9 +1657,10 @@ async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render(
  nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 function finNF(){
- codFill();
+ codFill();if(nfKeySt===undefined){nfKeySt=null;setTimeout(nfKeyStatus,0)}
  return '<div class="card fd"><h3>Conexão com o NFeMail</h3><p class="mu sm">A chave fica guardada no Supabase (função "nfemail"); o sistema nunca a vê. Só a Gestão usa.</p>'+
-  '<div class="dfm"><button class="btn s" '+(nfBusy?'disabled':'')+' onclick="nfTeste()">Testar conexão</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Produtos\',{page:1,limit:100})">Ver produtos</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Clientes\',{page:1,limit:20})">Ver clientes</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/NotasFiscais\',{page:1,limit:20})">Ver últimas notas</button></div>'+
+  '<div class="dfm nfk"><label class="fsel"><span>Chave de API do NFeMail '+(nfKeySt===undefined?'':nfKeySt?'<b class="ok">· salva em '+esc(new Date(nfKeySt).toLocaleString('pt-BR'))+'</b>':'<b class="er">· ainda não salva</b>')+'</span><input id="nfk" type="password" autocomplete="off" placeholder="Cole aqui a chave (fica guardada no banco, oculta)"></label><button class="btn s" onclick="nfKeySave()">Salvar chave</button></div>'+
+  '<div class="dfm" style="margin-top:10px"><button class="btn s" '+(nfBusy?'disabled':'')+' onclick="nfTeste()">Testar conexão</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Produtos\',{page:1,limit:100})">Ver produtos</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Clientes\',{page:1,limit:20})">Ver clientes</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/NotasFiscais\',{page:1,limit:20})">Ver últimas notas</button></div>'+
   (nfMsg?'<p class="nfm'+(nfMsg[0]==='✕'?' er':nfMsg[0]==='✓'?' ok':'')+'" role="status">'+esc(nfMsg)+'</p>':'')+
   (nfOut?'<div class="nfo"><button class="btn g s" onclick="nfCopy()">Copiar resposta</button><pre>'+esc(nfOut.slice(0,60000))+(nfOut.length>60000?'\n… (cortado)':'')+'</pre></div>':'')+'</div>'+
   '<h3 class="fh">Códigos dos produtos (novo padrão)</h3><p class="mu sm">Estes códigos vão em cada item da nota emitida pelo sistema. Os códigos antigos do NFeMail não precisam ser apagados: as notas emitidas daqui levam o código novo.</p>'+
