@@ -967,11 +967,11 @@ async function pdfBuild(o,lg){
  if(y>H-150){np()}
  y+=14;Ln(M,y,W-M,y,1.2,0);y+=20;
  T(M,y,'Total de itens: '+nUn(o.it)+' unidades · '+o.it.length+(o.it.length===1?' produto':' produtos'),10.5,false,'l',.1);
- const row=(a,b,big)=>{T(W-M-150,y,a,big?13:10.5,big,'l',big?0:.12);T(W-M-8,y,b,big?13:10.5,big,'r');y+=big?0:17};
+ const row=(a,b,big)=>{T(W-M-200,y,a,big?13:10.5,big,'l',big?0:.12);T(W-M-8,y,b,big?13:10.5,big,'r');y+=big?0:17};
  row('Subtotal',rs(t.b));
- if(o.desc){row('Desconto '+(pl==='Pix'?'Pix ':'')+'('+String(o.desc).replace('.',',')+'%)','- '+rs(t.d))}
- if(o.tx){T(W-M-150,y,'Taxa de pagamento ('+String(o.tx).replace('.',',')+'%): '+rs(t.t)+' (já inclusa)',8.5,false,'l',.1);y+=15}
- y+=3;Ln(W-M-160,y-12,W-M,y-12,.6,.6);y+=4;
+ if(o.desc){row('Desconto '+(pl==='Pix'?'Pix ':'')+'('+String(o.desc).replace('.',',')+'%)','- '+rs(t.d));row('Total com desconto',rs(t.b-t.d))}
+ if(o.tx){T(W-M-200,y,'Taxa de pagamento ('+String(o.tx).replace('.',',')+'%): '+rs(t.t)+' (já inclusa)',8.5,false,'l',.1);y+=15}
+ y+=3;Ln(W-M-210,y-12,W-M,y-12,.6,.6);y+=4;
  if(t.f)row('Frete',rs(t.f));
  row('Total',rs(t.c),true);
  if(o.obs){y+=34;if(y>H-100){np()}T(M,y,'OBSERVAÇÕES',8.5,true,'l',.1);y+=15;{let ln='';const ls=[];String(o.obs).split(/\s+/).forEach(w=>{const c2=ln?ln+' '+w:w;if(ln&&pdfW(c2,10,false)>W-2*M){ls.push(ln);ln=w}else ln=c2});if(ln)ls.push(ln);ls.forEach(s=>{if(y>H-60){np()}T(M,y,s,10,false,'l',.1);y+=13})}}
