@@ -48,8 +48,9 @@ Deno.serve(async (req) => {
     // 4) chama o NFeMail
     const r = await fetch(url, {
       method: m,
-      headers: { Authorization: "Basic " + btoa(CNPJ + ":" + KEY), Accept: "application/json, application/pdf, application/xml, text/plain, */*", ...(body != null ? { "Content-Type": "text/plain; charset=utf-8" } : {}) },
-      body: body != null ? String(body) : undefined,
+      // A emissão (POST api/NotasFiscais) espera o TXT como formulário: corpo "=" + TXT codificado (exemplo oficial do NFeMail)
+      headers: { Authorization: "Basic " + btoa(CNPJ + ":" + KEY), Accept: "application/json, application/pdf, application/xml, text/plain, */*", ...(body != null ? { "Content-Type": "application/x-www-form-urlencoded" } : {}) },
+      body: body != null ? "=" + encodeURIComponent(String(body)) : undefined,
     });
     const ct = r.headers.get("content-type") ?? "";
     if (/pdf|octet-stream|zip/i.test(ct)) {

@@ -619,9 +619,9 @@ function fO(id){
  '<p class="mu">Prazo de fabricação: '+esc(pzTxt(o))+(pv?' · previsão '+fd(pv):'')+(late(o)?' <span class="bd late">atrasado</span>':'')+'</p>'+
  '<div class="card tw"><table class="fx" style="min-width:0"><thead><tr><th style="width:52%">Produto</th><th class="r" style="width:12%">Qtd</th><th class="r" style="width:18%">Unitário</th><th class="r" style="width:18%">Subtotal</th></tr></thead><tbody>'+
  grp(o).map(g=>{const ok=id+'|'+g.f.k+'|'+g.m,mn=!ocl[ok];return '<tr class="gr cl" role="button" aria-expanded="'+(mn?'false':'true')+'" onclick="togO(\''+ok+'\','+id+')"><td>'+(mn?'▸ ':'▾ ')+gname(g)+'<span class="mu">'+gqs(o,g)+'</span></td><td class="r">'+g.q+' un</td><td></td><td class="r">'+R(g.v)+'</td></tr>'+(mn?'':g.idx.map(i=>{const r=o.it[i],p=prod(r[0]),pe=ep(o,r),tb=unit(p,c);return '<tr><td>'+esc(p.v)+'</td><td class="r">'+r[1]+'</td><td class="r">'+R(pe)+(Math.abs(pe-tb)>.004?'<div class="mu">tabela '+R(tb)+'</div>':'')+'</td><td class="r">'+R(pe*r[1])+'</td></tr>'}).join(''))}).join('')+''+brRows(o)+'</tbody></table></div>'+
- '<div class="tot"><div><span>Bruto</span><span>'+R(t.b)+'</span></div><div class="mu"><span>Desconto ('+o.desc+'%)</span><span>− '+R(t.d)+'</span></div><div class="mu"><span>Taxa ('+o.tx+'%)</span><span>− '+R(t.t)+'</span></div><div class="big"><span>Líquido</span><span>'+R(t.l)+'</span></div>'+(t.f?'<div><span>Frete'+(o.tr?' · '+esc(o.tr):'')+(o.trp?' · '+o.trp+' dias úteis':'')+'</span><span>'+R(t.f)+'</span></div><div class="big"><span>Total a cobrar do cliente</span><span>'+R(t.c)+'</span></div>':(o.tr?'<div class="mu"><span>Transportadora</span><span>'+esc(o.tr)+'</span></div>':''))+itensLn(o.it)+wLn(o)+'</div>'+consNote(o)+a+
+ '<div class="tot"><div><span>Bruto</span><span>'+R(t.b)+'</span></div><div class="mu"><span>Desconto ('+o.desc+'%)</span><span>− '+R(t.d)+'</span></div><div class="mu"><span>Taxa ('+o.tx+'%)</span><span>− '+R(t.t)+'</span></div><div class="big"><span>Líquido</span><span>'+R(t.l)+'</span></div>'+(t.f?'<div><span>Frete'+(o.tr?' · '+esc(o.tr):'')+(o.trp?' · '+o.trp+' dias úteis':'')+'</span><span>'+R(t.f)+'</span></div><div class="big"><span>Total a cobrar do cliente</span><span>'+R(t.c)+'</span></div>':(o.tr?'<div class="mu"><span>Transportadora</span><span>'+esc(o.tr)+'</span></div>':''))+itensLn(o.it)+wLn(o)+'</div>'+consNote(o)+a+nfBox(o)+
  (o.obs?'<div class="ob"><b>Observação:</b> '+esc(o.obs)+'</div>':'')+(o.st>=1?cmBox(o,'m'):'')+
- '<div class="act">'+(o.st<4?'<button class="btn g s" onclick="eO('+id+')">Editar pedido</button>':'')+'<button class="btn g s" onclick="fBrO('+id+')">+ Adicionar brinde</button><button class="btn g s" onclick="pdfO('+id+')">Baixar PDF (versão '+(o.pdfv||1)+')</button><button class="btn g s" onclick="askExc('+id+',1)">Excluir pedido</button>'+(o.st>0&&o.st<5?'<button class="btn g s" onclick="backO('+id+')">Voltar uma etapa</button>':'')+'<button class="btn g" onclick="closeM()">Fechar</button></div>');
+ '<div class="act">'+(o.st<4?'<button class="btn g s" onclick="eO('+id+')">Editar pedido</button>':'')+'<button class="btn g s" onclick="fBrO('+id+')">+ Adicionar brinde</button><button class="btn g s" onclick="pdfO('+id+')">Baixar PDF (versão '+(o.pdfv||1)+')</button>'+(role==='gestao'&&!o.nfe?'<button class="btn g s" onclick="nfDraft('+id+')">Gerar nota fiscal</button>':'')+'<button class="btn g s" onclick="askExc('+id+',1)">Excluir pedido</button>'+(o.st>0&&o.st<5?'<button class="btn g s" onclick="backO('+id+')">Voltar uma etapa</button>':'')+'<button class="btn g" onclick="closeM()">Fechar</button></div>');
 }
 function fBrO(id,from){
  const o=ord(id);
@@ -1663,6 +1663,85 @@ async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render(
  nfMsg=r.ok?'✓ '+path+(n!=null?' ('+n+' registros)':' (resposta recebida)'):'✕ '+r.erro;
  nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
+/* ===== Gerar nota (emissão pelo NFeMail) ===== */
+const NFE_EM={xNome:'BOTOFE FABRICACAO E COMERCIO DE ARTIGOS RELIGIOSOS LTDA',xFant:'Maria Leticia Teixeira Santa Rosa',IE:'0804042300146',IM:'0804042300146',CNAE:'3299099',CRT:'1',CNPJ:'41134556000158',lgr:'Nucr Corrego do Torto Trecho 3',nro:'26',bairro:'Setor de Habitacoes Individuais Norte',cMun:'5300108',mun:'BRASILIA',UF:'DF',CEP:'71538500',fone:'61993071919'};
+const nx=s=>String(s==null?'':s).replace(/[|\r\n]+/g,' ').replace(/\s+/g,' ').trim();
+const n2=v=>(Math.round(v*100+1e-6)/100).toFixed(2);
+let nfd=null;
+function nfItens(o){const m={};o.it.forEach(r=>{const p=prod(r[0]),pr=du(o,ep(o,r)),k=p.f+'|'+p.m+'|'+pr.toFixed(2);
+ const g=m[k]||(m[k]={cod:CODP[p.f+'|'+p.m]||p.f.toUpperCase(),nome:p.fn+(p.ml?' '+p.m:''),ncm:p.ncm||NCMF[p.f]||'',un:pr,q:0,v:[]});g.q+=r[1];g.v.push(r[1]+' '+p.v)});
+ return Object.keys(m).map(k=>{const g=m[k];return{cod:g.cod,nome:g.nome,ncm:g.ncm,un:g.un,q:g.q,vp:Math.round(g.un*g.q*100+1e-6)/100,inf:g.v.join(', ')+'.'}})}
+function nfDraft(id){const o=ord(id),c=cof(o),cc=o.cli?cli(o.cli):null;
+ const doc=String(o.doc||(cc&&cc.doc)||'').replace(/\D/g,''),cep=String(o.cep||(cc&&cc.cep)||'').replace(/\D/g,''),end=String(o.end||(cc&&cc.end)||''),cid=String(o.cid||(cc&&cc.cid)||'');
+ const pt=end.split(' · '),cm=/^(.*?),\s*(\d+[A-Za-z]?)$/.exec((pt[0]||'').trim()),cu=/^(.*)\/([A-Za-z]{2})$/.exec(cid.trim());
+ nfd={id:id,nome:c.n||'',doc:doc,ie:'',cep:cep,lgr:cm?cm[1]:(pt[0]||''),nro:cm?cm[2]:'S/N',cpl:'',bairro:pt[1]||'',mun:cu?cu[1]:cid,uf:cu?cu[2].toUpperCase():'',ibge:'',fone:String((cc&&cc.tel)||o.lt||'').replace(/\D/g,''),mail:(cc&&cc.mail)||o.lm||'',fr:(+o.fr||0)>0,hd:true,ok:false,busy:false,msg:'',out:'',items:nfItens(o)};
+ nfConf();nfCep()}
+async function nfCep(){const d=nfd;if(!d||d.cep.length!==8)return;
+ try{const r=await fetch('https://viacep.com.br/ws/'+d.cep+'/json/'),j=await r.json();if(nfd!==d||j.erro)return;
+  d.ibge=j.ibge||d.ibge;if(!d.lgr)d.lgr=j.logradouro||'';if(!d.bairro)d.bairro=j.bairro||'';if(!d.mun)d.mun=j.localidade||'';if(!d.uf)d.uf=j.uf||'';
+  if(j.uf&&d.uf!==j.uf){d.uf=j.uf;d.mun=j.localidade||d.mun}
+  if(!d.busy)nfConf()}catch(e){}}
+function nfF(k,v){if(!nfd)return;nfd[k]=v;if(k==='cep'){nfd.cep=v.replace(/\D/g,'').slice(0,8);nfd.ibge='';nfCep()}if(k==='doc')nfd.doc=v.replace(/\D/g,'');if(k==='uf')nfd.uf=v.toUpperCase().slice(0,2);nfConf()}
+function nfCalc(d){const o=ord(d.id),it=d.items,fr=d.fr?Math.max(0,+o.fr||0):0,bp=it.reduce((s,x)=>s+x.vp,0);
+ let rest=Math.round(fr*100),acc=0;const fs=it.map((x,i)=>{if(i===it.length-1)return rest/100;const v=Math.floor(fr*100*x.vp/bp+1e-6);rest-=v;return v/100});
+ const dest=d.uf==='DF';return{o:o,fr:fr,bp:bp,fs:fs,vnf:Math.round((bp+fr)*100)/100,cfop:dest?'5101':'6101',idd:dest?1:2,cnpj:d.doc.length===14,ie:d.doc.length===14&&d.ie.replace(/\D/g,'')!==''}}
+function nfErr(d){const o=ord(d.id),e=[],k=nfCalc(d);
+ if(!d.items.length)e.push('O pedido não tem itens.');if(!d.nome.trim())e.push('Falta o nome do destinatário.');
+ if(d.doc.length!==11&&d.doc.length!==14)e.push('CPF (11 números) ou CNPJ (14 números) inválido.');
+ if(d.cep.length!==8)e.push('CEP precisa de 8 números.');if(!d.lgr.trim())e.push('Falta o logradouro.');if(!d.bairro.trim())e.push('Falta o bairro.');if(!d.mun.trim())e.push('Falta o município.');
+ if(d.uf.length!==2)e.push('UF inválida.');if(!/^\d{7}$/.test(d.ibge))e.push('Código IBGE do município ainda não encontrado (confira o CEP).');
+ d.items.forEach(x=>{if(!/^\d{8}$/.test(x.ncm))e.push('Falta o NCM de '+x.nome+' (Financeiro → Nota fiscal).')});
+ if(cof(o).cat==='Consignação')e.push('Cliente de consignação: a nota de remessa tem regras próprias e ainda não foi implementada.');
+ if(o.nfe)e.push('Este pedido já teve uma nota enviada.');return e}
+function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).join('|')+'|');
+ const now=new Date(Date.now()-3*3600*1000).toISOString().slice(0,19)+'-03:00';
+ a('A','4.00','');
+ a('B','53','','Venda de produção do estabelecimento','55','1','',now,'','1',k.idd,E.cMun,'1','1','','1','1',k.cnpj&&k.ie?'0':'1','2','0','','','');
+ a('C',E.xNome,E.xFant,E.IE,'',E.IM,E.CNAE,E.CRT);a('C02',E.CNPJ);a('C05',E.lgr,E.nro,'',E.bairro,E.cMun,E.mun,E.UF,E.CEP,'1058','BRASIL',E.fone);
+ a('E',d.nome,k.cnpj&&k.ie?'1':'9',k.cnpj&&k.ie?d.ie.replace(/\D/g,''):'','','',d.mail);a(k.cnpj?'E02':'E03',d.doc);
+ a('E05',d.lgr,d.nro||'S/N',d.cpl,d.bairro,d.ibge,d.mun,d.uf,d.cep,'1058','BRASIL',d.fone);
+ d.items.forEach((x,i)=>{const n=i+1,nt=x.ncm==='33073000';
+  a('H',n,x.inf);
+  a('I',x.cod,'SEM GTIN',x.nome,x.ncm,'','',k.cfop,'UN',x.q.toFixed(4),n2(x.un),n2(x.vp),'SEM GTIN','UN',x.q.toFixed(4),n2(x.un),k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'');
+  a('M','');a('N');a('N10d','0','102');
+  a('Q');if(nt)a('Q04','07');else a('Q02','99','0.00','0.0000','0.00');
+  a('S');if(nt)a('S04','07');else a('S02','99','0.00','0.0000','0.00')});
+ a('W');a('W02','0.00','0.00','0.00','0.00','0.00','0.00','0.00','0.00',n2(k.bp),n2(k.fr),'0.00','0.00','0.00','0.00','0.00','0.00','0.00','0.00',n2(k.vnf),'0.00');
+ a('X',k.fr>0?'0':'9');a('Y');a('YA','0.00');
+ const pg=k.o.pg,tp={'Pix':'20','Cartão de crédito':'03','Boleto':'15','Dinheiro':'01'}[pg]||'99';
+ a('YA01a',pg==='Boleto'?'1':'0',tp,n2(k.vnf));if(tp==='03')a('YA04','2','','');
+ return (d.hd?'NOTAFISCAL|1|\n':'')+L.join('\n')+'\n'}
+function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
+ const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota.</p>'+
+ '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
+ f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
+ '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
+ '<div class="card tw"><table class="fx" style="min-width:0"><thead><tr><th>Item da nota</th><th class="r">Qtd</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>'+
+ d.items.map(x=>'<tr><td><b>'+esc(x.cod)+'</b> · '+esc(x.nome)+'<div class="mu">NCM '+esc(x.ncm||'—')+' · '+esc(x.inf)+'</div></td><td class="r">'+x.q+'</td><td class="r">'+R(x.un)+'</td><td class="r">'+R(x.vp)+'</td></tr>').join('')+'</tbody></table></div>'+
+ '<div class="tot"><div><span>Produtos</span><span>'+R(k.bp)+'</span></div>'+((+o.fr||0)>0?'<div><span><label><input type="checkbox" '+(d.fr?'checked':'')+' onchange="nfF(\'fr\',this.checked)"> Incluir frete na nota</label></span><span>'+R(k.fr)+'</span></div>':'')+'<div class="big"><span>Total da nota</span><span>'+R(k.vnf)+'</span></div><div class="mu"><span>Pagamento</span><span>'+esc(o.pg)+'</span></div></div>'+
+ (er.length?'<div class="note" style="border-color:#c0392b"><b>Corrija antes de emitir:</b><br>'+er.map(esc).join('<br>')+'</div>':'')+
+ '<details style="margin:10px 0"><summary class="mu">Ver o arquivo que será enviado</summary><label class="mu sm"><input type="checkbox" '+(d.hd?'checked':'')+' onchange="nfF(\'hd\',this.checked)"> Incluir a linha NOTAFISCAL|1| no começo (padrão SEFAZ)</label><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto">'+esc(nfTxt(d))+'</pre></details>'+
+ (d.msg?'<div class="note">'+esc(d.msg)+'</div>':'')+(d.out?'<pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">'+esc(d.out)+'</pre>':'')+
+ '<label class="mu" style="display:block;margin:10px 0"><input type="checkbox" '+(d.ok?'checked':'')+' onchange="nfd.ok=this.checked;nfConf()"> Conferi e quero emitir esta nota fiscal de verdade</label>'+
+ '<div class="act"><button class="btn" '+(er.length||!d.ok||d.busy?'disabled':'')+' onclick="nfEmit()">'+(d.busy?'Enviando…':'Emitir nota fiscal')+'</button><button class="btn g" onclick="fO('+d.id+')">Voltar ao pedido</button></div>',760)}
+function nfAchar(j){const s=typeof j==='string'?j:JSON.stringify(j||'');const m=/(?:^|\D)(\d{44})(?:\D|$)/.exec(s);return m?m[1]:''}
+async function nfEmit(){const d=nfd;if(!d||d.busy||nfErr(d).length||!d.ok)return;const o=ord(d.id);d.busy=true;d.msg='Enviando ao NFeMail…';nfConf();
+ const r=await nfe('POST','api/NotasFiscais',{},nfTxt(d));d.busy=false;
+ const raw=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||'')):'';d.out=raw;
+ if(!r.ok){d.msg='✕ Não foi enviada: '+(r.erro||'sem resposta')+'. Nada foi emitido. Mostre esta mensagem ao Claude.';d.ok=false;return nfConf()}
+ const ch=nfAchar(raw);o.nfe={t:TODAY,x:'BTF-'+d.id,r:String(raw).slice(0,300)};if(ch){o.nfch=ch;o.nf=String(+ch.slice(25,34))}
+ render();d.msg=ch?'✓ Nota enviada. Nº '+o.nf+'.':'✓ Enviada ao NFeMail. Ainda sem número: aguarde alguns minutos e use "Atualizar status" no pedido.';nfd=null;fO(d.id);toast(d.msg)}
+async function nfAtu(id){const o=ord(id);if(!o||!o.nfe)return;toast('Consultando o NFeMail…');
+ let r=await nfe('GET','api/NotasFiscais',{pedido:o.nfe.x});let raw=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados):(r.j.texto||'')):'';
+ const ch=nfAchar(raw);if(ch){o.nfch=ch;o.nf=String(+ch.slice(25,34));render();fO(id);return toast('Nota nº '+o.nf+' encontrada')}
+ open('<h2>Nota ainda não apareceu</h2><p class="mu">O NFeMail não devolveu a nota deste pedido agora. Resposta recebida:</p><pre style="white-space:pre-wrap;font-size:11px;max-height:300px;overflow:auto">'+esc(r.ok?raw.slice(0,3000):(r.erro||''))+'</pre><div class="act"><button class="btn g" onclick="fO('+id+')">Voltar ao pedido</button></div>',640)}
+async function nfBaixar(id,tipo){const o=ord(id);if(!o)return;const q=o.nfch?{chave:o.nfch}:{pedido:o.nfe&&o.nfe.x};toast('Baixando…');
+ const r=await nfe('GET',tipo==='pdf'?'api/DANFe':'api/ArquivoXML',q);if(!r.ok)return toast(r.erro||'Não foi possível baixar');
+ try{let blob;if(tipo==='pdf'){if(!r.j.base64)return toast('O NFeMail não devolveu o PDF');const b=atob(r.j.base64),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);blob=new Blob([u],{type:'application/pdf'})}
+  else blob=new Blob([r.j.texto||JSON.stringify(r.j.dados||'')],{type:'application/xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='NF-e '+(o.nf||('pedido '+id))+(tipo==='pdf'?'.pdf':'.xml');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}catch(e){toast('Falha ao baixar')}}
+const nfBox=o=>role!=='gestao'?'':(o.nfe?'<div class="note"><b>Nota fiscal</b> · '+(o.nf?'nº '+esc(o.nf):'enviada, aguardando número')+'<div class="act"><button class="btn g s" onclick="nfAtu('+o.id+')">Atualizar status</button>'+(o.nfe?'<button class="btn g s" onclick="nfBaixar('+o.id+',\'pdf\')">DANFE (PDF)</button><button class="btn g s" onclick="nfBaixar('+o.id+',\'xml\')">XML</button>':'')+'</div></div>':'');
 function finNF(){
  codFill();if(nfKeySt===undefined){nfKeySt=null;setTimeout(nfKeyStatus,0)}
  return '<div class="card fd"><h3>Conexão com o NFeMail</h3><p class="mu sm">A chave fica guardada no Supabase (função "nfemail"); o sistema nunca a vê. Só a Gestão usa.</p>'+
