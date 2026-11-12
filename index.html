@@ -253,6 +253,7 @@ html{overflow-anchor:none}
 
 @media(max-width:375px){aside{padding-left:8px;padding-right:8px}.nav{font-size:10.5px}}
 /* Financeiro */
+.nfm{margin:10px 0 0;font-weight:700}.nfm.ok{color:var(--ok)}.nfm.er{color:var(--er)}.nfo{margin-top:10px}.nfo pre{max-height:420px;overflow:auto;background:#f6f5f2;border:1px solid var(--bd);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
 .card.dtw{overflow:visible}.dt thead th:first-child{border-top-left-radius:14px}.dt thead th:last-child{border-top-right-radius:14px}
 @media(max-width:760px){.dt thead{display:none}.dt,.dt tbody{display:block}.dt tr{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"c c c" "d d d" "v m x";gap:4px 10px;padding:10px 12px;border-bottom:1px solid var(--bd)}
  .dt td{display:block;padding:0;border:0;width:auto!important}.dt td:nth-child(1){grid-area:c}.dt td:nth-child(2){grid-area:d}.dt td:nth-child(3){grid-area:v}.dt td:nth-child(4){grid-area:m;display:flex;align-items:center;gap:6px}.dt td:nth-child(4)::after{content:"mensal";font-size:13px;color:var(--mu)}.dt td:nth-child(5){grid-area:x}
@@ -1416,10 +1417,10 @@ function chTip(e){const t=e.target.closest&&e.target.closest('[data-v]');let tp=
 ['pointermove','focusin','pointerdown'].forEach(ev=>document.addEventListener(ev,chTip));document.addEventListener('scroll',()=>{const tp=$('#ctip');if(tp)tp.style.display='none'},true);
 /* ---- tela ---- */
 function vFin(){
- const tabs=[['geral','Visão geral'],['vendas','Vendas por produto'],['desp','Despesas'],['custos','Custos e impostos']];
+ const tabs=[['geral','Visão geral'],['vendas','Vendas por produto'],['desp','Despesas'],['custos','Custos e impostos'],['nf','Nota fiscal']];
  const h='<h1>Financeiro</h1><p class="lead">Faturamento conta quando o cliente paga: pedidos de varejo, atacado e distribuidor a partir da confirmação (pagos antes de confirmar) e consignação pelos recebimentos registrados em A receber.</p>'+
   '<div class="ftabs" role="tablist">'+tabs.map(t=>'<button role="tab" aria-selected="'+(finTab===t[0])+'" class="ftab'+(finTab===t[0]?' on':'')+'" onclick="finTab=\''+t[0]+'\';render()">'+t[1]+'</button>').join('')+'</div>';
- return h+({geral:finGeral,vendas:finVendas,desp:finDesp,custos:finCustos})[finTab]()}
+ return h+({geral:finGeral,vendas:finVendas,desp:finDesp,custos:finCustos,nf:finNF})[finTab]()}
 function finGeral(){
  const r=perRange(finPer),x=finCalc(r),cur=ym(TODAY);
  const ms=[];for(let i=11;i>=0;i--)ms.push(addM(cur,-i));const mm=ms.map(m=>finCalc({a:m,b:m}));
@@ -1545,7 +1546,7 @@ async function iniciar(){
  if(!j.length){lsSet(SKEY,null);sess=null;$('#lgb').disabled=false;return lgMsg('Seu acesso ainda não foi liberado. Fale com a Gestão.')}
  perfil=j[0];role=perfil.papel==='producao'?'producao':'gestao';view=NAV[role][0][0];
  lgMsg('Carregando dados…',true);
- const ok=await carregar(!relog);relog=false;if(ok&&perfil.papel==='gestao')migra();if(!ok){$('#lgb').disabled=false;if(errBusca||$('#lgm').textContent.indexOf('ainda não foi iniciado')<0)lgMsg('Não foi possível carregar os dados'+errBusca+'. Tente de novo.');return}
+ const ok=await carregar(!relog);relog=false;if(ok&&perfil.papel==='gestao'){migra();codFill()}if(!ok){$('#lgb').disabled=false;if(errBusca||$('#lgm').textContent.indexOf('ainda não foi iniciado')<0)lgMsg('Não foi possível carregar os dados'+errBusca+'. Tente de novo.');return}
  document.body.classList.remove('lg-on');$('#lg').style.display='none';render()}
 function chave(c,x){return x.id!=null?String(x.id):c==='F'?x.k:(x._k||(x._k=Date.now().toString(36)+Math.random().toString(36).slice(2,8)))}
 function tagTime(c,a){if(c==='VM'){for(let i=a.length-1;i>=0;i--)if(!a[i]._t)a[i]._t=Date.now()*1000+(++tSeq)}else if(c==='CX'||c==='F'){for(let i=0;i<a.length;i++)if(!a[i]._t)a[i]._t=Date.now()*1000+(++tSeq)}}
@@ -1628,6 +1629,34 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){if(perfil&
 window.addEventListener('focus',atualizar);
 window.addEventListener('online',()=>{if(perfil)gravar()});
 setInterval(atualizar,60000);
+/* ===== Nota fiscal (NFeMail) — etapa A: conexão, consultas e códigos ===== */
+const CODP={'inc|Unidade':'INC','vela|100 g':'VG','vela|20 g':'VP','spray|60 ml':'SP60','spray|120 ml':'SP120','banho|Ziplock':'BZ','banho|Garrafa':'BG','esc|Unidade':'ESC','cha|Unidade':'CHA'};
+function codPadrao(p){const k=p.f+'|'+p.m,pre=CODP[k]||(p.f.slice(0,3)+(p.ml?String(p.m).replace(/\W/g,''):'')).toUpperCase();
+ const g=P.filter(x=>x.f===p.f&&x.m===p.m).sort((a,b)=>a.id-b.id);return pre+'-'+String(g.indexOf(p)+1).padStart(2,'0')}
+function codFill(){P.forEach(p=>{if(!p.cod)p.cod=codPadrao(p)})}
+async function nfe(method,path,query,body){
+ const call=()=>fetch(SB_URL+'/functions/v1/nfemail',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+(sess&&sess.access_token),'Content-Type':'application/json'},body:JSON.stringify({method:method,path:path,query:query||{},body:body==null?null:body})});
+ let r;try{r=await call();if(r.status===401&&await refresh())r=await call()}catch(e){return{ok:false,erro:'Sem conexão com a função nfemail. Ela já foi instalada no Supabase?'}}
+ let j={};try{j=await r.json()}catch(e){}
+ if(!r.ok)return{ok:false,erro:r.status===404?'A função nfemail ainda não está instalada no Supabase.':(j.erro||j.message||j.msg||('Erro '+r.status))};
+ return{ok:j.status>=200&&j.status<300,st:j.status,j:j,erro:j.status>=300?'NFeMail respondeu '+j.status+': '+(j.texto||JSON.stringify(j.dados||'')).slice(0,300):''}}
+let nfOut='',nfMsg='',nfBusy=false;
+async function nfTeste(){nfBusy=true;nfMsg='Testando…';render();const r=await nfe('GET','api/Produtos',{page:1,limit:1});nfBusy=false;
+ nfMsg=r.ok?'✓ Conectado ao NFeMail.':'✕ '+r.erro;nfOut=r.j?JSON.stringify(r.j.dados!=null?r.j.dados:r.j,null,2):'';render()}
+async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render();const r=await nfe('GET',path,q);nfBusy=false;
+ nfMsg=r.ok?'✓ '+path+' ('+(Array.isArray(r.j.dados)?r.j.dados.length+' registros':'resposta recebida')+')':'✕ '+r.erro;
+ nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
+function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
+function finNF(){
+ codFill();
+ return '<div class="card fd"><h3>Conexão com o NFeMail</h3><p class="mu sm">A chave fica guardada no Supabase (função "nfemail"); o sistema nunca a vê. Só a Gestão usa.</p>'+
+  '<div class="dfm"><button class="btn s" '+(nfBusy?'disabled':'')+' onclick="nfTeste()">Testar conexão</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Produtos\',{page:1,limit:100})">Ver produtos</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Clientes\',{page:1,limit:20})">Ver clientes</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/NotasFiscais\',{page:1,limit:20})">Ver últimas notas</button></div>'+
+  (nfMsg?'<p class="nfm'+(nfMsg[0]==='✕'?' er':nfMsg[0]==='✓'?' ok':'')+'" role="status">'+esc(nfMsg)+'</p>':'')+
+  (nfOut?'<div class="nfo"><button class="btn g s" onclick="nfCopy()">Copiar resposta</button><pre>'+esc(nfOut.slice(0,60000))+(nfOut.length>60000?'\n… (cortado)':'')+'</pre></div>':'')+'</div>'+
+  '<h3 class="fh">Códigos dos produtos (novo padrão)</h3><p class="mu sm">Estes códigos vão em cada item da nota emitida pelo sistema. Os códigos antigos do NFeMail não precisam ser apagados: as notas emitidas daqui levam o código novo.</p>'+
+  '<div class="card tw"><table class="fx"><thead><tr><th style="width:22%">Código</th><th style="width:78%">Produto</th></tr></thead><tbody>'+
+  FAM.map(f=>f.mod.map(md=>P.filter(p=>p.f===f.k&&p.m===md.n).sort((a,b)=>a.id-b.id).map(p=>'<tr><td><b>'+esc(p.cod)+'</b></td><td>'+esc(pfull(p))+'</td></tr>').join('')).join('')).join('')+'</tbody></table></div>'}
+
 async function abrir(){
  const s=lsGet(SKEY);
  if(s){try{sess=JSON.parse(s)}catch(e){sess=null}}
