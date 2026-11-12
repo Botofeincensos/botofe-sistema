@@ -1636,7 +1636,12 @@ setInterval(atualizar,60000);
 const CODP={'inc|Unidade':'INC','vela|100 g':'VG','vela|20 g':'VP','spray|60 ml':'SP60','spray|120 ml':'SP120','banho|Ziplock':'BZ','banho|Garrafa':'BG','esc|Unidade':'ESC','cha|Unidade':'CHA'};
 function codPadrao(p){const k=p.f+'|'+p.m,pre=CODP[k]||(p.f.slice(0,3)+(p.ml?String(p.m).replace(/\W/g,''):'')).toUpperCase();
  const g=P.filter(x=>x.f===p.f&&x.m===p.m).sort((a,b)=>a.id-b.id);return pre+'-'+String(g.indexOf(p)+1).padStart(2,'0')}
-function codFill(){P.forEach(p=>{if(!p.cod)p.cod=codPadrao(p)})}
+const NCMF={inc:'33074100',vela:'34060000',banho:'33073000',esc:'33073000',cha:'09022000'};   /* NCM usados hoje no NFeMail; spray sem NCM cadastrado lá */
+function codFill(){P.forEach(p=>{if(!p.cod)p.cod=codPadrao(p);if(p.ncm==null&&NCMF[p.f])p.ncm=NCMF[p.f]})}
+let nfProd=null;   /* produtos lidos do NFeMail (última consulta) */
+function nfMatch(p){if(!nfProd)return null;const v=nrm(p.v),fam={inc:'incenso',vela:'vela',spray:'spray',banho:'banho',esc:'escalda',cha:'cha'}[p.f]||nrm(p.fn);
+ return nfProd.find(x=>{const d=nrm(x.dsc_produto||'');if(!d.includes(fam)||!d.includes(v))return false;if(p.f==='vela')return d.replace(/\s/g,'').includes(String(p.m).replace(/\s/g,''));if(p.f==='banho')return p.m==='Ziplock'?/zip/.test(d):/vidro|garrafa/.test(d);return true})||null}
+function ncmSet(id,v){const p=prod(id);if(!p)return;v=String(v).replace(/\D/g,'');if(v&&v.length!==8)return toast('O NCM tem 8 números');p.ncm=v||null;render()}
 async function nfe(method,path,query,body){
  const call=()=>fetch(SB_URL+'/functions/v1/nfemail',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+(sess&&sess.access_token),'Content-Type':'application/json'},body:JSON.stringify({method:method,path:path,query:query||{},body:body==null?null:body})});
  let r;try{r=await call();if(r.status===401&&await refresh())r=await call()}catch(e){return{ok:false,erro:'Sem conexão com a função nfemail. Ela já foi instalada no Supabase?'}}
@@ -1653,7 +1658,9 @@ async function nfKeySave(){const e=$('#nfk'),k=e?e.value.trim():'';if(k.length<1
 async function nfTeste(){nfBusy=true;nfMsg='Testando…';render();const r=await nfe('GET','api/Produtos',{page:1,limit:1});nfBusy=false;
  nfMsg=r.ok?'✓ Conectado ao NFeMail.':'✕ '+r.erro;nfOut=r.j?JSON.stringify(r.j.dados!=null?r.j.dados:r.j,null,2):'';render()}
 async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render();const r=await nfe('GET',path,q);nfBusy=false;
- nfMsg=r.ok?'✓ '+path+' ('+(Array.isArray(r.j.dados)?r.j.dados.length+' registros':'resposta recebida')+')':'✕ '+r.erro;
+ if(r.ok&&path==='api/Produtos'&&r.j.dados&&Array.isArray(r.j.dados.ListaProduto))nfProd=r.j.dados.ListaProduto;
+ const n=r.j&&r.j.dados?(Array.isArray(r.j.dados)?r.j.dados.length:(r.j.dados.Paginacao&&r.j.dados.Paginacao.records)):null;
+ nfMsg=r.ok?'✓ '+path+(n!=null?' ('+n+' registros)':' (resposta recebida)'):'✕ '+r.erro;
  nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 function finNF(){
@@ -1663,9 +1670,11 @@ function finNF(){
   '<div class="dfm" style="margin-top:10px"><button class="btn s" '+(nfBusy?'disabled':'')+' onclick="nfTeste()">Testar conexão</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Produtos\',{page:1,limit:100})">Ver produtos</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/Clientes\',{page:1,limit:20})">Ver clientes</button><button class="btn g s" '+(nfBusy?'disabled':'')+' onclick="nfVer(\'api/NotasFiscais\',{page:1,limit:20})">Ver últimas notas</button></div>'+
   (nfMsg?'<p class="nfm'+(nfMsg[0]==='✕'?' er':nfMsg[0]==='✓'?' ok':'')+'" role="status">'+esc(nfMsg)+'</p>':'')+
   (nfOut?'<div class="nfo"><button class="btn g s" onclick="nfCopy()">Copiar resposta</button><pre>'+esc(nfOut.slice(0,60000))+(nfOut.length>60000?'\n… (cortado)':'')+'</pre></div>':'')+'</div>'+
-  '<h3 class="fh">Códigos dos produtos (novo padrão)</h3><p class="mu sm">Estes códigos vão em cada item da nota emitida pelo sistema. Os códigos antigos do NFeMail não precisam ser apagados: as notas emitidas daqui levam o código novo.</p>'+
-  '<div class="card tw"><table class="fx"><thead><tr><th style="width:22%">Código</th><th style="width:78%">Produto</th></tr></thead><tbody>'+
-  FAM.map(f=>f.mod.map(md=>P.filter(p=>p.f===f.k&&p.m===md.n).sort((a,b)=>a.id-b.id).map(p=>'<tr><td><b>'+esc(p.cod)+'</b></td><td>'+esc(pfull(p))+'</td></tr>').join('')).join('')).join('')+'</tbody></table></div>'}
+  '<h3 class="fh">Produtos: código novo e dados fiscais</h3><p class="mu sm">O código novo vai em cada item da nota emitida pelo sistema; o cadastro antigo do NFeMail não precisa mudar. NCM inicial = o que já está no NFeMail para a mesma categoria. Clique em "Ver produtos" para mostrar o código antigo correspondente.</p>'+
+  '<div class="card tw"><table class="fx"><thead><tr><th style="width:16%">Código novo</th><th style="width:40%">Produto</th><th style="width:20%">NCM</th><th style="width:24%">No NFeMail hoje</th></tr></thead><tbody>'+
+  FAM.map(f=>f.mod.map(md=>P.filter(p=>p.f===f.k&&p.m===md.n).sort((a,b)=>a.id-b.id).map(p=>{const m=nfMatch(p);return '<tr><td><b>'+esc(p.cod)+'</b></td><td>'+esc(pfull(p))+'</td><td><input class="din'+(p.ncm?'':' warn')+'" inputmode="numeric" maxlength="10" value="'+esc(p.ncm||'')+'" placeholder="falta NCM" aria-label="NCM de '+esc(pfull(p))+'" onchange="ncmSet('+p.id+',this.value)"></td><td class="mu">'+(m?esc(m.cod_alternativo||String(m.cod_produto))+' · '+esc(m.dsc_produto):(nfProd?'não cadastrado':'—'))+'</td></tr>'}).join('')).join('')).join('')+'</tbody></table></div>'+
+  (nfProd?'<h3 class="fh">No NFeMail, mas não no catálogo do sistema</h3><div class="card tw"><table class="fx"><thead><tr><th style="width:18%">Código antigo</th><th style="width:56%">Descrição</th><th style="width:26%">NCM</th></tr></thead><tbody>'+
+   nfProd.filter(x=>!P.some(p=>nfMatch(p)===x)).map(x=>'<tr><td>'+esc(x.cod_alternativo||String(x.cod_produto))+'</td><td>'+esc(x.dsc_produto)+'</td><td>'+esc(x.ncm_produto||'')+'</td></tr>').join('')+'</tbody></table></div>':'')}
 
 async function abrir(){
  const s=lsGet(SKEY);
