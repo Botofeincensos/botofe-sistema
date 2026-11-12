@@ -615,7 +615,7 @@ function fO(id){
   '<p class="mu">Nota fiscal e rastreio são opcionais: o envio pode ser marcado sem eles.</p></div>';
  else if(o.st===4)a='<div class="note">Enviado'+(o.rast?' · rastreio '+esc(o.rast):'')+(o.nf?' · NF '+esc(o.nf):'')+'.</div><div class="act"><button class="btn" onclick="delO('+id+')">Marcar como entregue</button></div>';
  else a='<div class="note">Pedido entregue'+(o.nf?' · NF '+esc(o.nf):'')+'.</div>';
- open('<h2>Pedido #'+id+'</h2><div class="mu">'+esc(c.n)+' · '+(c.none?'tabela '+c.cat.toLowerCase():c.cat)+' · criado em '+fd(o.data)+' · '+esc(o.pg)+'</div>'+stepper(o)+
+ open('<h2>Pedido #'+id+'</h2><div class="mu"><button class="lk" aria-expanded="'+(pcl['cd'+id]?'true':'false')+'" onclick="togCd('+id+')" title="Ver dados do cliente"><b>'+esc(c.n)+'</b> '+(pcl['cd'+id]?'▾':'▸')+'</button> · '+(c.none?'tabela '+c.cat.toLowerCase():c.cat)+' · criado em '+fd(o.data)+' · '+esc(o.pg)+'</div>'+cdBox(o)+stepper(o)+
  '<p class="mu">Prazo de fabricação: '+esc(pzTxt(o))+(pv?' · previsão '+fd(pv):'')+(late(o)?' <span class="bd late">atrasado</span>':'')+'</p>'+
  '<div class="card tw"><table class="fx" style="min-width:0"><thead><tr><th style="width:52%">Produto</th><th class="r" style="width:12%">Qtd</th><th class="r" style="width:18%">Unitário</th><th class="r" style="width:18%">Subtotal</th></tr></thead><tbody>'+
  grp(o).map(g=>{const ok=id+'|'+g.f.k+'|'+g.m,mn=!ocl[ok];return '<tr class="gr cl" role="button" aria-expanded="'+(mn?'false':'true')+'" onclick="togO(\''+ok+'\','+id+')"><td>'+(mn?'▸ ':'▾ ')+gname(g)+'<span class="mu">'+gqs(o,g)+'</span></td><td class="r">'+g.q+' un</td><td></td><td class="r">'+R(g.v)+'</td></tr>'+(mn?'':g.idx.map(i=>{const r=o.it[i],p=prod(r[0]),pe=ep(o,r),tb=unit(p,c);return '<tr><td>'+esc(p.v)+'</td><td class="r">'+r[1]+'</td><td class="r">'+R(pe)+(Math.abs(pe-tb)>.004?'<div class="mu">tabela '+R(tb)+'</div>':'')+'</td><td class="r">'+R(pe*r[1])+'</td></tr>'}).join(''))}).join('')+''+brRows(o)+'</tbody></table></div>'+
@@ -1663,6 +1663,17 @@ async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render(
  nfMsg=r.ok?'✓ '+path+(n!=null?' ('+n+' registros)':' (resposta recebida)'):'✕ '+r.erro;
  nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
+/* dados do cliente no pedido (clique no nome) + copiar para o frete */
+function cdDados(o){const c=o.cli?cli(o.cli):null,x=(a,b)=>String(a||b||'').trim();
+ return{nome:x(c&&c.n,o.nome),doc:x(o.doc,c&&c.doc),tel:x(o.lt,c&&c.tel),mail:x(o.lm,c&&c.mail),cep:x(o.cep,c&&c.cep),end:x(o.end,c&&c.end),cid:x(o.cid,c&&c.cid)}}
+const cdLn=(l,v,k)=>'<div class="row2" style="align-items:center;gap:8px;margin:3px 0"><span class="mu" style="min-width:86px">'+l+'</span><span style="flex:1;overflow-wrap:anywhere">'+(v?esc(v):'<span class="mu">— não cadastrado</span>')+'</span>'+(v?'<button class="btn g s" onclick="cdCopy('+k+')" aria-label="Copiar '+l+'">Copiar</button>':'')+'</div>';
+let cdTx=[];
+function cdBox(o){if(!pcl['cd'+o.id])return '';const d=cdDados(o);cdTx=[d.nome,d.doc,d.tel,d.cep,d.end,d.cid,d.mail];
+ const fr=['Nome: '+d.nome,'CPF/CNPJ: '+d.doc,'Telefone: '+d.tel,'CEP: '+d.cep,'Endereço: '+[d.end,d.cid].filter(Boolean).join(' · ')].join('\n');cdTx.push(fr);
+ return '<div class="sec" style="margin:8px 0"><h4>Dados do cliente · frete</h4>'+cdLn('Nome',d.nome,0)+cdLn('CPF / CNPJ',d.doc,1)+cdLn('Telefone',d.tel,2)+cdLn('CEP',d.cep,3)+cdLn('Endereço',d.end,4)+cdLn('Cidade/UF',d.cid,5)+cdLn('E-mail',d.mail,6)+
+ '<div class="act"><button class="btn s" onclick="cdCopy(7)">Copiar dados para o frete</button></div></div>'}
+function togCd(id){pcl['cd'+id]=!pcl['cd'+id];fO(id)}
+function cdCopy(i){const t=cdTx[i]||'';try{navigator.clipboard.writeText(t).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 /* ===== Gerar nota (emissão pelo NFeMail) ===== */
 const NFE_EM={xNome:'BOTOFE FABRICACAO E COMERCIO DE ARTIGOS RELIGIOSOS LTDA',xFant:'Maria Leticia Teixeira Santa Rosa',IE:'0804042300146',IM:'0804042300146',CNAE:'3299099',CRT:'1',CNPJ:'41134556000158',lgr:'Nucr Corrego do Torto Trecho 3',nro:'26',bairro:'Setor de Habitacoes Individuais Norte',cMun:'5300108',mun:'BRASILIA',UF:'DF',CEP:'71538500',fone:'61993071919'};
 const nx=s=>String(s==null?'':s).replace(/[|\r\n]+/g,' ').replace(/\s+/g,' ').trim();
