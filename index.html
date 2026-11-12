@@ -357,7 +357,7 @@ const cmBox=(o,w)=>{const L=o.cm||[],op=!!pcl['cm'+w+o.id];return '<div class="s
  '<div class="row2"><input id="cm'+w+o.id+'" aria-label="Novo comentário do pedido '+o.id+'" placeholder="Escreva um comentário" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addCm('+o.id+',\''+w+'\')}"><button class="btn g s" onclick="addCm('+o.id+',\''+w+'\')">Comentar</button></div>')+'</div>'};
 function togCm(id,w){pcl['cm'+w+id]=!pcl['cm'+w+id];render();if(w==='m')fO(id)}
 function addCm(id,w){const o=ord(id),e=$('#cm'+w+id),v=e?e.value.trim():'';if(!v)return toast('Escreva o comentário');o.cm=o.cm||[];o.cm.push({a:role==='producao'?'Produção':'Gestão',d:TODAY,h:new Date().toTimeString().slice(0,5),t:v});render();if(w==='m')fO(id);toast('Comentário registrado: produção e gestão veem')}
-const du=(o,p)=>o.desc?Math.round(p*(1-o.desc/100)*100)/100:p;   /* unitário com o desconto do pedido (ex.: Pix 5%) */
+const du=(o,p)=>o.desc?Math.floor(p*(1-o.desc/100)*100+1e-6)/100:p;   /* unitário com o desconto do pedido (ex.: Pix 5%); corta a 3ª casa dos centavos, sem arredondar */
 function tot(o){const b=o.it.reduce((s,r)=>s+ep(o,r)*r[1],0);const d=o.desc?Math.round((b-o.it.reduce((s,r)=>s+du(o,ep(o,r))*r[1],0))*100)/100:0;const t=(b-d)*o.tx/100;const f=Math.max(0,+o.fr||0);return{b:b,d:d,t:t,l:b-d-t,f:f,c:b-d+f}}
 function prev(o){if(!o.conf)return '';const m=/^(\d+) dias/.exec(o.pz);return m?iso(addBD(pd(o.conf),+m[1])):''}
 const pzTxt=o=>o.pz==='Outro (manual)'?(o.pzTxt||'A combinar'):o.pz;
