@@ -1703,8 +1703,9 @@ function nfItens(o){const m={};o.it.forEach(r=>{const p=prod(r[0]),pr=ep(o,r),k=
  const g=m[k]||(m[k]={cod:CODP[p.f+'|'+p.m]||p.f.toUpperCase(),nome:p.fn+(p.ml?' '+p.m:''),ncm:p.ncm||NCMF[p.f]||'',un:pr,q:0,v:[]});g.q+=r[1];g.v.push(r[1]+' '+p.v)});
  const L=Object.keys(m).map(k=>{const g=m[k];return{cod:g.cod,nome:g.nome,ncm:g.ncm,un:o.desc?g.un*(1-o.desc/100):g.un,q:g.q,vp:dv(o,Math.round(g.un*g.q*100)/100),inf:g.v.join(', ')+'.'}});
  if(L.length){const b=o.it.reduce((s,r)=>s+ep(o,r)*r[1],0),df=Math.round((dv(o,b)-L.reduce((s,x)=>s+x.vp,0))*100)/100;if(df)L[L.length-1].vp=Math.round((L[L.length-1].vp+df)*100)/100}
+ L.forEach(x=>{x.un=x.vp/x.q});
  return L}
-const nu=v=>{let s=(Math.round(v*10000)/10000).toFixed(4);while(s.endsWith('0')&&s.split('.')[1].length>2)s=s.slice(0,-1);return s};
+const nu=v=>{let s=(Math.round(v*1e10)/1e10).toFixed(10);while(s.endsWith('0')&&s.split('.')[1].length>2)s=s.slice(0,-1);return s};
 function nfDraft(id){const o=ord(id),c=cof(o),cc=o.cli?cli(o.cli):null;
  const doc=String(o.doc||(cc&&cc.doc)||'').replace(/\D/g,''),cep=String(o.cep||(cc&&cc.cep)||'').replace(/\D/g,''),end=String(o.end||(cc&&cc.end)||''),cid=String(o.cid||(cc&&cc.cid)||'');
  const pt=end.split(' · '),cm=/^(.*?),\s*(\d+[A-Za-z]?)$/.exec((pt[0]||'').trim()),cu=/^(.*)\/([A-Za-z]{2})$/.exec(cid.trim());
@@ -1730,21 +1731,21 @@ function nfErr(d){const o=ord(d.id),e=[],k=nfCalc(d);
 function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).join('|')+'|');
  const now=new Date(Date.now()-3*3600*1000).toISOString().slice(0,19)+'-03:00';
  a('A','4.00','');
- a('B','53','','Venda de produção do estabelecimento','55','1','',now,'','1',k.idd,E.cMun,'1','1','','1','1',k.cnpj&&k.ie?'0':'1','2','0','','','');
+ a('B','53','','Venda de produção do estabelecimento','55','1','',now,'','1',k.idd,E.cMun,'1','1','','1','1',k.cnpj&&k.ie?'0':'1','2','0','0','','','');
  a('C',E.xNome,E.xFant,E.IE,'',E.IM,E.CNAE,E.CRT);a('C02',E.CNPJ);a('C05',E.lgr,E.nro,'',E.bairro,E.cMun,E.mun,E.UF,E.CEP,'1058','BRASIL',E.fone);
  a('E',d.nome,k.cnpj&&k.ie?'1':'9',k.cnpj&&k.ie?d.ie.replace(/\D/g,''):'','','',d.mail);a(k.cnpj?'E02':'E03',d.doc);
  a('E05',d.lgr,d.nro||'S/N',d.cpl,d.bairro,d.ibge,d.mun,d.uf,d.cep,'1058','BRASIL',d.fone);
  d.items.forEach((x,i)=>{const n=i+1,nt=x.ncm==='33073000';
   a('H',n,x.inf);
-  a('I',x.cod,'SEM GTIN',x.nome,x.ncm,'','',k.cfop,'UN',x.q.toFixed(4),nu(x.un),n2(x.vp),'SEM GTIN','UN',x.q.toFixed(4),nu(x.un),k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'');
+  a('I',x.cod,'SEM GTIN','',x.nome,x.ncm,'',k.cfop,'UN',x.q.toFixed(4),nu(x.un),n2(x.vp),'','','','','',k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'','','','');
   a('M','');a('N');a('N10d','0','102');
   a('Q');if(nt)a('Q04','07');else a('Q02','99','0.00','0.0000','0.00');
   a('S');if(nt)a('S04','07');else a('S02','99','0.00','0.0000','0.00')});
  a('W');a('W02','0.00','0.00','0.00','0.00','0.00','0.00','0.00','0.00',n2(k.bp),n2(k.fr),'0.00','0.00','0.00','0.00','0.00','0.00','0.00','0.00',n2(k.vnf),'0.00');
- a('X',k.fr>0?'0':'9');a('Y');a('YA','0.00');
+ a('X',k.fr>0?'0':'9');a('Y');a('YA');
  const pg=k.o.pg,tp={'Pix':'20','Cartão de crédito':'03','Boleto':'15','Dinheiro':'01'}[pg]||'99';
- a('YA01a',pg==='Boleto'?'1':'0',tp,n2(k.vnf));if(tp==='03')a('YA04','2','','');
- return (d.hd?'NOTAFISCAL|1|\n':'')+L.join('\n')+'\n'}
+ a('YA01',pg==='Boleto'?'1':'0',tp,'',n2(k.vnf));if(tp==='03')a('YA04','','','');
+ return L.join('\n')+'\n'}
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
  open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota.</p>'+
@@ -1755,7 +1756,7 @@ function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfEr
  d.items.map(x=>'<tr><td><b>'+esc(x.cod)+'</b> · '+esc(x.nome)+'<div class="mu">NCM '+esc(x.ncm||'—')+' · '+esc(x.inf)+'</div></td><td class="r">'+x.q+'</td><td class="r">'+R(x.un)+'</td><td class="r">'+R(x.vp)+'</td></tr>').join('')+'</tbody></table></div>'+
  '<div class="tot"><div><span>Produtos</span><span>'+R(k.bp)+'</span></div>'+((+o.fr||0)>0?'<div><span><label><input type="checkbox" '+(d.fr?'checked':'')+' onchange="nfF(\'fr\',this.checked)"> Incluir frete na nota</label></span><span>'+R(k.fr)+'</span></div>':'')+'<div class="big"><span>Total da nota</span><span>'+R(k.vnf)+'</span></div><div class="mu"><span>Pagamento</span><span>'+esc(o.pg)+'</span></div></div>'+
  (er.length?'<div class="note" style="border-color:#c0392b"><b>Corrija antes de emitir:</b><br>'+er.map(esc).join('<br>')+'</div>':'')+
- '<details style="margin:10px 0"><summary class="mu">Ver o arquivo que será enviado</summary><label class="mu sm"><input type="checkbox" '+(d.hd?'checked':'')+' onchange="nfF(\'hd\',this.checked)"> Incluir a linha NOTAFISCAL|1| no começo (padrão SEFAZ)</label><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto">'+esc(nfTxt(d))+'</pre></details>'+
+ '<details style="margin:10px 0"><summary class="mu">Ver o arquivo que será enviado</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto">'+esc(nfTxt(d))+'</pre></details>'+
  (d.msg?'<div class="note">'+esc(d.msg)+'</div>':'')+(d.out?'<pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">'+esc(d.out)+'</pre>':'')+
  '<label class="mu" style="display:block;margin:10px 0"><input type="checkbox" '+(d.ok?'checked':'')+' onchange="nfd.ok=this.checked;nfConf()"> Conferi e quero emitir esta nota fiscal de verdade</label>'+
  '<div class="act"><button class="btn" '+(er.length||!d.ok||d.busy?'disabled':'')+' onclick="nfEmit()">'+(d.busy?'Enviando…':'Emitir nota fiscal')+'</button><button class="btn g" onclick="fO('+d.id+')">Voltar ao pedido</button></div>',760)}
@@ -1775,7 +1776,9 @@ async function nfBaixar(id,tipo){const o=ord(id);if(!o)return;const q=o.nfch?{ch
  try{let blob;if(tipo==='pdf'){if(!r.j.base64)return toast('O NFeMail não devolveu o PDF');const b=atob(r.j.base64),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);blob=new Blob([u],{type:'application/pdf'})}
   else blob=new Blob([r.j.texto||JSON.stringify(r.j.dados||'')],{type:'application/xml'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='NF-e '+(o.nf||('pedido '+id))+(tipo==='pdf'?'.pdf':'.xml');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}catch(e){toast('Falha ao baixar')}}
-const nfBox=o=>role!=='gestao'?'':(o.nfe?'<div class="note"><b>Nota fiscal</b> · '+(o.nf?'nº '+esc(o.nf):'enviada, aguardando número')+'<div class="act"><button class="btn g s" onclick="nfAtu('+o.id+')">Atualizar status</button>'+(o.nfe?'<button class="btn g s" onclick="nfBaixar('+o.id+',\'pdf\')">DANFE (PDF)</button><button class="btn g s" onclick="nfBaixar('+o.id+',\'xml\')">XML</button>':'')+'</div></div>':'');
+function nfLib(id){open('<h2>Liberar para reenviar</h2><p class="mu">Use só se a nota deste pedido foi <b>rejeitada</b> ou não foi emitida no NFeMail. Se ela já foi autorizada, reenviar duplica a nota.</p><div class="act"><button class="btn" onclick="nfLib2('+id+')">Sim, liberar</button><button class="btn g" onclick="fO('+id+')">Cancelar</button></div>',520)}
+function nfLib2(id){const o=ord(id);if(!o||o.nf)return fO(id);delete o.nfe;delete o.nfch;render();fO(id);toast('Pedido liberado: pode gerar a nota de novo')}
+const nfBox=o=>role!=='gestao'?'':(o.nfe?'<div class="note"><b>Nota fiscal</b> · '+(o.nf?'nº '+esc(o.nf):'enviada, aguardando número')+'<div class="act"><button class="btn g s" onclick="nfAtu('+o.id+')">Atualizar status</button>'+(o.nfe?(o.nf?'':'<button class="btn g s" onclick="nfLib('+o.id+')">Liberar para reenviar</button>')+'<button class="btn g s" onclick="nfBaixar('+o.id+',\'pdf\')">DANFE (PDF)</button><button class="btn g s" onclick="nfBaixar('+o.id+',\'xml\')">XML</button>':'')+'</div></div>':'');
 function finNF(){
  codFill();if(nfKeySt===undefined){nfKeySt=null;setTimeout(nfKeyStatus,0)}
  return '<div class="card fd"><h3>Conexão com o NFeMail</h3><p class="mu sm">A chave fica guardada no Supabase (função "nfemail"); o sistema nunca a vê. Só a Gestão usa.</p>'+
