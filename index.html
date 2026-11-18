@@ -1737,7 +1737,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  a('E05',d.lgr,d.nro||'S/N',d.cpl,d.bairro,d.ibge,d.mun,d.uf,d.cep,'1058','BRASIL',d.fone);
  d.items.forEach((x,i)=>{const n=i+1,nt=x.ncm==='33073000';
   a('H',n,x.inf);
-  a('I',x.cod,'SEM GTIN','',x.nome,x.ncm,'',k.cfop,'UN',x.q.toFixed(4),nu(x.un),n2(x.vp),'','','','','',k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'','','','');
+  a('I',x.cod,'SEM GTIN','',x.nome,x.ncm,'',k.cfop,'UN',x.q.toFixed(4),nu(x.un),n2(x.vp),d.tr?'SEM GTIN':'','',d.tr?'UN':'',d.tr?x.q.toFixed(4):'',d.tr?nu(x.un):'',k.fs[i]?n2(k.fs[i]):'','','','','1','BTF-'+d.id,n,'','','','');
   a('M','');a('N');a('N10d','0','102');
   a('Q');if(nt)a('Q04','07');else a('Q02','99','0.00','0.0000','0.00');
   a('S');if(nt)a('S04','07');else a('S02','99','0.00','0.0000','0.00')});
@@ -1748,7 +1748,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  return 'NOTAFISCAL|1|\n'+L.join('\n')+'\n'}   /* o NFeMail só aceita com esta linha de cabeçalho (sem ela: 400 The request is invalid) */
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
- open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 18/11-c</span></p>'+
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 18/11-d</span></p>'+
  '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
  f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
  '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
@@ -1756,7 +1756,7 @@ function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfEr
  d.items.map(x=>'<tr><td><b>'+esc(x.cod)+'</b> · '+esc(x.nome)+'<div class="mu">NCM '+esc(x.ncm||'—')+' · '+esc(x.inf)+'</div></td><td class="r">'+x.q+'</td><td class="r">'+R(x.un)+'</td><td class="r">'+R(x.vp)+'</td></tr>').join('')+'</tbody></table></div>'+
  '<div class="tot"><div><span>Produtos</span><span>'+R(k.bp)+'</span></div>'+((+o.fr||0)>0?'<div><span><label><input type="checkbox" '+(d.fr?'checked':'')+' onchange="nfF(\'fr\',this.checked)"> Incluir frete na nota</label></span><span>'+R(k.fr)+'</span></div>':'')+'<div class="big"><span>Total da nota</span><span>'+R(k.vnf)+'</span></div><div class="mu"><span>Pagamento</span><span>'+esc(o.pg)+'</span></div></div>'+
  (er.length?'<div class="note" style="border-color:#c0392b"><b>Corrija antes de emitir:</b><br>'+er.map(esc).join('<br>')+'</div>':'')+
- '<details style="margin:10px 0"><summary class="mu">Ver o arquivo que será enviado</summary><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto">'+esc(nfTxt(d))+'</pre></details>'+
+ '<details style="margin:10px 0"><summary class="mu">Ver o arquivo que será enviado</summary><label class="mu sm" style="display:block"><input type="checkbox" '+(d.tr?'checked':'')+' onchange="nfF(\'tr\',this.checked)"> Repetir os valores comerciais nos campos tributáveis (só se o NFeMail marcar "definir tributação diferente" sozinho; normal: desligado, campos em branco)</label><pre style="white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto">'+esc(nfTxt(d))+'</pre></details>'+
  (d.msg?'<div class="note">'+esc(d.msg)+'</div>':'')+(d.out?'<pre style="white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto">'+esc(d.out)+'</pre>':'')+
  '<label class="mu" style="display:block;margin:10px 0"><input type="checkbox" '+(d.ok?'checked':'')+' onchange="nfd.ok=this.checked;nfConf()"> Conferi e quero emitir esta nota fiscal de verdade</label>'+
  '<div class="act"><button class="btn" '+(er.length||!d.ok||d.busy?'disabled':'')+' onclick="nfEmit()">'+(d.busy?'Enviando…':'Emitir nota fiscal')+'</button><button class="btn g" onclick="fO('+d.id+')">Voltar ao pedido</button></div>',760)}
