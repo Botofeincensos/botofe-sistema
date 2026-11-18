@@ -1748,7 +1748,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  return L.join('\n')+'\n'}
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
- open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota.</p>'+
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer 'Layout SEBRAE', a página está em cache: recarregue">Layout SEBRAE · versão 18/11-b</span></p>'+
  '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
  f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
  '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
