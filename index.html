@@ -1748,7 +1748,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  return 'NOTAFISCAL|1|\n'+L.join('\n')+'\n'}   /* o NFeMail só aceita com esta linha de cabeçalho (sem ela: 400 The request is invalid) */
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
- open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 18/11-d</span></p>'+
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 18/11-e</span></p>'+
  '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
  f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
  '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
@@ -1765,12 +1765,19 @@ async function nfEmit(){const d=nfd;if(!d||d.busy||nfErr(d).length||!d.ok)return
  const r=await nfe('POST','api/NotasFiscais',{},nfTxt(d));d.busy=false;
  const raw=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||'')):'';d.out=raw;
  if(!r.ok){d.msg='✕ Não foi enviada: '+(r.erro||'sem resposta')+'. Nada foi emitido. Mostre esta mensagem ao Claude.';d.ok=false;return nfConf()}
- const ch=nfAchar(raw);o.nfe={t:TODAY,x:'BTF-'+d.id,r:String(raw).slice(0,300)};if(ch){o.nfch=ch;o.nf=String(+ch.slice(25,34))}
+ const ch=nfAchar(raw);o.nfe={t:TODAY,x:'BTF-'+d.id,v:n2(nfCalc(d).vnf),d:d.doc,r:String(raw).slice(0,300)};if(ch){o.nfch=ch;o.nf=String(+ch.slice(25,34))}
  render();d.msg=ch?'✓ Nota enviada. Nº '+o.nf+'.':'✓ Enviada ao NFeMail. Ainda sem número: aguarde alguns minutos e use "Atualizar status" no pedido.';nfd=null;fO(d.id);toast(d.msg)}
+function nfItensResp(j){const d=j&&j.dados!=null?j.dados:null;if(d==null)return[];const ac=x=>{if(Array.isArray(x))return x;if(x&&typeof x==='object'){for(const k of Object.keys(x)){if(Array.isArray(x[k]))return x[k]}return[x]}return[]};return ac(d).filter(x=>x&&typeof x==='object')}
+function nfLer(it){const t=JSON.stringify(it),m=/(?:^|\D)(\d{44})(?:\D|$)/.exec(t),st=[];Object.keys(it).forEach(k=>{if(/status|situa|motivo|retorno|mensagem|cstat|xmotivo/i.test(k)&&it[k]!=null&&it[k]!=='')st.push(String(it[k]))});
+ return{t:t,chave:m?m[1]:'',st:st.join(' · ')}}
 async function nfAtu(id){const o=ord(id);if(!o||!o.nfe)return;toast('Consultando o NFeMail…');
- let r=await nfe('GET','api/NotasFiscais',{pedido:o.nfe.x});let raw=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados):(r.j.texto||'')):'';
- const ch=nfAchar(raw);if(ch){o.nfch=ch;o.nf=String(+ch.slice(25,34));render();fO(id);return toast('Nota nº '+o.nf+' encontrada')}
- open('<h2>Nota ainda não apareceu</h2><p class="mu">O NFeMail não devolveu a nota deste pedido agora. Resposta recebida:</p><pre style="white-space:pre-wrap;font-size:11px;max-height:300px;overflow:auto">'+esc(r.ok?raw.slice(0,3000):(r.erro||''))+'</pre><div class="act"><button class="btn g" onclick="fO('+id+')">Voltar ao pedido</button></div>',640)}
+ const tv=o.nfe.v||n2(tot(o).c),doc=String(o.nfe.d||cdDados(o).doc||'').replace(/\D/g,'');let ach=null,raws=[],err='';
+ const qs=[{pedido:o.nfe.x,page:1,limit:10}];if(doc)qs.push({cpfcnpj:doc,page:1,limit:30});
+ for(const q of qs){const r=await nfe('GET','api/NotasFiscais',q);if(!r.ok){err=r.erro||'';continue}raws.push(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||''));
+  const its=nfItensResp(r.j).map(nfLer);const c=q.pedido?its[0]:its.find(x=>tv&&(x.t.indexOf('"'+tv+'"')>=0||x.t.indexOf(':'+tv)>=0||x.t.indexOf(tv)>=0));if(c){ach=c;break}}
+ if(ach&&ach.chave){o.nfch=ach.chave;o.nf=String(+ach.chave.slice(25,34));o.nfe.st=ach.st;render();fO(id);return toast('Nota nº '+o.nf+' encontrada'+(ach.st?' · '+ach.st:''))}
+ if(ach){o.nfe.st=ach.st;render()}
+ open('<h2>'+(ach?'Nota encontrada, ainda sem número':'Nota não encontrada')+'</h2><p class="mu">'+(ach?'Situação no NFeMail: <b>'+esc(ach.st||'não informada')+'</b>. Se estiver rejeitada, corrija no NFeMail ou libere o pedido para reenviar.':'O NFeMail não devolveu a nota deste pedido agora.')+(err?' Erro: '+esc(err):'')+'</p><pre style="white-space:pre-wrap;font-size:11px;max-height:300px;overflow:auto">'+esc((ach?ach.t:raws.join('\n---\n')).slice(0,4000))+'</pre><div class="act"><button class="btn g" onclick="fO('+id+')">Voltar ao pedido</button></div>',640)}
 async function nfBaixar(id,tipo){const o=ord(id);if(!o)return;const q=o.nfch?{chave:o.nfch}:{pedido:o.nfe&&o.nfe.x};toast('Baixando…');
  const r=await nfe('GET',tipo==='pdf'?'api/DANFe':'api/ArquivoXML',q);if(!r.ok)return toast(r.erro||'Não foi possível baixar');
  try{let blob;if(tipo==='pdf'){if(!r.j.base64)return toast('O NFeMail não devolveu o PDF');const b=atob(r.j.base64),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);blob=new Blob([u],{type:'application/pdf'})}
