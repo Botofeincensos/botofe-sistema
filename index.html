@@ -268,7 +268,7 @@ html{overflow-anchor:none}
 .seg2{display:flex;border:1px solid var(--bd);border-radius:10px;overflow:hidden}.seg2 button{border:0;background:#fff;padding:9px 12px;min-height:40px;font:inherit;font-size:14px;cursor:pointer;color:inherit}.seg2 button.on{background:#161616;color:#fff}
 .fk small{display:block;font-size:12px;color:var(--mu);margin-top:2px}
 .fk .neg b,.dre .neg td{color:var(--er)}.fk .pos b{color:var(--ok)}
-.fd{padding:14px 16px;margin:0 0 14px}.fd h3,.fh{margin:0 0 8px;font-size:17px}.fh{margin:18px 0 8px}
+.fd{padding:14px 16px;margin:0 0 14px}.card.fd{overflow:visible}.fd h3,.fh{margin:0 0 8px;font-size:17px}.fh{margin:18px 0 8px}
 .sm{font-size:13px;margin:4px 0 10px}
 .dre{width:100%;border-collapse:collapse}.dre td,.dre th{padding:8px 6px;border-bottom:1px solid var(--bd)}.dre .sb td{font-weight:700;border-top:2px solid var(--tx)}
 .fk2{margin-top:12px}
@@ -1758,7 +1758,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  return 'NOTAFISCAL|1|\n'+L.join('\n')+'\n'}   /* o NFeMail só aceita com esta linha de cabeçalho (sem ela: 400 The request is invalid) */
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
- open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 19/11-d</span></p>'+
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 19/11-e</span></p>'+
  '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte; "ISENTO" se for isento)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
  f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
  '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
