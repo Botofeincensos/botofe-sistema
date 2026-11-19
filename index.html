@@ -417,13 +417,14 @@ function fC(id){
  ced=JSON.parse(JSON.stringify((id&&c.esp)||{}));cedOpen={};
  open('<h2>'+(id?'Editar cliente':'Novo cliente')+'</h2><div class="fg">'+
  '<div class="f"><label for="a1">Nome / Razão social</label><input id="a1" value="'+esc(c.n)+'"></div>'+
- '<div><label for="a2">CPF / CNPJ</label><input id="a2" value="'+esc(c.doc)+'"></div>'+
+ '<div><label for="a2">CPF / CNPJ</label><input id="a2" value="'+esc(c.doc)+'" onchange="cnpjC()"></div>'+
+ '<div><label for="a11">Inscrição estadual</label><input id="a11" value="'+esc(c.ie||'')+'" placeholder="vazio = não contribuinte"></div>'+
  '<div><label for="a3">Categoria</label><select id="a3" onchange="rEsp()">'+CATS.map(x=>'<option '+(c.cat===x?'selected':'')+'>'+x+'</option>').join('')+'</select></div>'+
  '<div><label for="a4">Telefone / WhatsApp</label><input id="a4" value="'+esc(c.tel)+'"></div>'+
  '<div><label for="a5">E-mail</label><input id="a5" value="'+esc(c.mail)+'"></div>'+
  '<div><label for="a10">CEP</label><input id="a10" inputmode="numeric" maxlength="9" placeholder="00000-000" value="'+esc(c.cep||'')+'" oninput="cepIn(this)"></div>'+
  '<div><label for="a7">Cidade / UF</label><input id="a7" value="'+esc(c.cid)+'"></div>'+
- '<div class="f"><label for="a6">Endereço</label><input id="a6" value="'+esc(c.end)+'"><p class="mu" id="cepm" style="margin:6px 0 0">Digite o CEP e o endereço é preenchido sozinho. Você pode corrigir os campos se precisar.</p></div>'+
+ '<div class="f"><label for="a6">Endereço</label><input id="a6" value="'+esc(c.end)+'"><p class="mu" id="cepm" style="margin:6px 0 0">Digite o CEP (ou o CNPJ) e o endereço e a inscrição estadual são preenchidos sozinhos. Você pode corrigir os campos se precisar.</p></div>'+
  '<div class="f"><label for="a9">Logo ou foto</label><div class="who"><span class="av" id="pv">'+(foto?'<img src="'+foto+'" alt="">':'＋')+'</span><input id="a9" type="file" accept="image/*" onchange="pfo(this)"></div></div>'+
  '<div class="f"><label for="a8">Observações</label><textarea id="a8" rows="2">'+esc(c.obs)+'</textarea></div></div>'+
  '<div class="sec" id="espw"></div>'+'<div class="act">'+(id?'<button class="btn dg" style="margin-right:auto" onclick="askCli('+id+')">Excluir cliente</button>':'')+'<button class="btn g" onclick="cancC()">Cancelar</button><button class="btn" onclick="sC('+(id||0)+')">'+(cfromN?'Cadastrar e usar no pedido':'Salvar')+'</button></div>',0,cfromN);
@@ -455,10 +456,14 @@ async function cepIn(el){
   m.textContent='Endereço preenchido. Você pode editar se precisar.';
  }catch(e){if(tk===cepTk&&$('#cepm'))$('#cepm').textContent='Não consegui buscar o CEP agora. Preencha o endereço manualmente.'}
 }
+async function cnpjC(){const el=$('#a2');if(!el)return;const n=el.value.replace(/\D/g,''),m=$('#cepm');if(n.length!==14)return;if(m)m.textContent='Buscando dados do CNPJ…';
+ const set=(id,v)=>{const e=$('#'+id);if(e&&v&&!e.value.trim())e.value=v},j=await cnpjInfo(n,($('#a7')&&$('#a7').value.split('/')[1]||'').trim().toUpperCase());
+ if(!$('#a2')||$('#a2').value.replace(/\D/g,'')!==n)return;set('a10',j.cep);set('a6',j.end);set('a7',j.cid);set('a4',j.tel);set('a5',j.mail);set('a11',j.ie);
+ if($('#cepm'))$('#cepm').textContent=j.ie?'Dados do CNPJ preenchidos, com a inscrição estadual. Confira antes de salvar.':(j.cep?'Dados do CNPJ preenchidos. Não achei a inscrição estadual na consulta pública: digite se o cliente tiver (vazio = não contribuinte).':'Não consegui buscar este CNPJ agora. Preencha manualmente.')}
 function pfo(i){const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{foto=r.result;$('#pv').innerHTML='<img src="'+foto+'" alt="">'};r.readAsDataURL(f)}
 function sC(id){
  const n=$('#a1').value.trim();if(!n)return toast('Informe o nome do cliente');
- const d={n:n,doc:$('#a2').value,cat:$('#a3').value,tel:$('#a4').value,mail:$('#a5').value,cep:$('#a10').value,end:$('#a6').value,cid:$('#a7').value,obs:$('#a8').value,foto:foto,esp:Object.keys(ced).length?ced:undefined};
+ const d={n:n,doc:$('#a2').value,ie:$('#a11').value.trim(),cat:$('#a3').value,tel:$('#a4').value,mail:$('#a5').value,cep:$('#a10').value,end:$('#a6').value,cid:$('#a7').value,obs:$('#a8').value,foto:foto,esp:Object.keys(ced).length?ced:undefined};
  if(id)Object.assign(cli(id),d);else{const nid=Math.max.apply(null,[0].concat(C.map(x=>x.id)))+1;C.push(Object.assign({id:nid},d));if(cfromN){cfromN=false;dr.cli=nid;dr.nome='';dr.pm='tabela';dr.tc='';dr.cep=d.cep;dr.end=d.end;dr.cid=d.cid;dr.doc=d.doc;dr.hl=false;render();rN();return toast('Cliente cadastrado e vinculado ao pedido')}}
  close();render();toast('Cliente salvo (exemplo)');
 }
@@ -1664,17 +1669,22 @@ async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render(
  nfMsg=r.ok?'✓ '+path+(n!=null?' ('+n+' registros)':' (resposta recebida)'):'✕ '+r.erro;
  nfOut=r.j?(r.j.dados!=null?JSON.stringify(r.j.dados,null,2):(r.j.texto||JSON.stringify(r.j,null,2))):'';render()}
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
+/* consulta pública por CNPJ: endereço/contato (BrasilAPI) e inscrição estadual (CNPJ.ws) */
+async function cnpjInfo(doc,uf){const r={};
+ try{const j=await(await fetch('https://brasilapi.com.br/api/cnpj/v1/'+doc)).json();if(j&&j.cep){const c8=String(j.cep).replace(/\D/g,'');r.cep=c8.slice(0,5)+'-'+c8.slice(5);r.end=[[j.logradouro,j.numero].filter(Boolean).join(', '),j.bairro].filter(Boolean).join(' · ');r.cid=j.municipio?j.municipio+(j.uf?'/'+j.uf:''):'';r.tel=j.ddd_telefone_1||'';r.mail=j.email?String(j.email).toLowerCase():'';r.uf=j.uf||''}}catch(e){}
+ try{const j=await(await fetch('https://publica.cnpj.ws/cnpj/'+doc)).json(),L=(j&&j.estabelecimento&&j.estabelecimento.inscricoes_estaduais)||[],u=uf||r.uf||'',f=L.filter(x=>x.ativo!==false),q=f.find(x=>x.estado&&x.estado.sigla===u)||f[0];if(q&&q.inscricao_estadual)r.ie=String(q.inscricao_estadual)}catch(e){}
+ return r}
 /* dados do cliente no pedido (clique no nome): preenche o que falta (CEP→ViaCEP, CNPJ→BrasilAPI), permite editar e salvar no cadastro */
-const CDM={doc:'doc',tel:'lt',mail:'lm',cep:'cep',end:'end',cid:'cid'};
+const CDM={doc:'doc',tel:'lt',mail:'lm',cep:'cep',end:'end',cid:'cid',ie:'ie'};
 function cdDados(o){const c=o.cli?cli(o.cli):null,x=(a,b)=>String(a||b||'').trim();
- return{nome:x(c&&c.n,o.nome),doc:x(o.doc,c&&c.doc),tel:x(o.lt,c&&c.tel),mail:x(o.lm,c&&c.mail),cep:x(o.cep,c&&c.cep),end:x(o.end,c&&c.end),cid:x(o.cid,c&&c.cid)}}
+ return{nome:x(c&&c.n,o.nome),doc:x(o.doc,c&&c.doc),tel:x(o.lt,c&&c.tel),mail:x(o.lm,c&&c.mail),ie:x(o.ie,c&&c.ie),cep:x(o.cep,c&&c.cep),end:x(o.end,c&&c.end),cid:x(o.cid,c&&c.cid)}}
 const cdIn=(l,k,v,ph)=>'<div class="row2" style="align-items:center;gap:8px;margin:4px 0"><label class="mu" style="min-width:86px">'+l+'</label><input style="flex:1;min-width:0" value="'+esc(v)+'" placeholder="'+esc(ph||'')+'" aria-label="'+l+'" onchange="cdSet(\''+k+'\',this.value)">'+(v?'<button class="btn g s" onclick="cdCopy(\''+k+'\')" aria-label="Copiar '+l+'">Copiar</button>':'')+'</div>';
 let cdTx={},cdId=0,cdBusy=false,cdMsg='';
-function cdDif(o){const c=o.cli?cli(o.cli):null;if(!c)return false;const d=cdDados(o);return[['doc','doc'],['tel','tel'],['mail','mail'],['cep','cep'],['end','end'],['cid','cid']].some(a=>d[a[0]]&&d[a[0]]!==String(c[a[1]]||'').trim())}
+function cdDif(o){const c=o.cli?cli(o.cli):null;if(!c)return false;const d=cdDados(o);return[['doc','doc'],['ie','ie'],['tel','tel'],['mail','mail'],['cep','cep'],['end','end'],['cid','cid']].some(a=>d[a[0]]&&d[a[0]]!==String(c[a[1]]||'').trim())}
 function cdBox(o){if(!pcl['cd'+o.id])return '';const d=cdDados(o);cdId=o.id;cdTx=Object.assign({},d,{frete:['Nome: '+d.nome,'CPF/CNPJ: '+d.doc,'Telefone: '+d.tel,'CEP: '+d.cep,'Endereço: '+[d.end,d.cid].filter(Boolean).join(' · ')].join('\n')});
- const falta=!d.doc||!d.tel||!d.cep||!d.end||!d.cid;
+ const falta=!d.doc||!d.tel||!d.cep||!d.end||!d.cid||(d.doc.replace(/\D/g,'').length===14&&!d.ie);
  return '<div class="sec" style="margin:8px 0"><h4>Dados do cliente · frete</h4><div class="row2" style="gap:8px;margin:4px 0"><span class="mu" style="min-width:86px">Nome</span><b style="flex:1">'+esc(d.nome)+'</b><button class="btn g s" onclick="cdCopy(\'nome\')">Copiar</button></div>'+
- cdIn('CPF / CNPJ','doc',d.doc,'Digite para buscar o endereço pelo CNPJ')+cdIn('Telefone','tel',d.tel)+cdIn('CEP','cep',d.cep,'00000-000')+cdIn('Endereço','end',d.end,'Rua, número · bairro')+cdIn('Cidade/UF','cid',d.cid,'Cidade/UF')+cdIn('E-mail','mail',d.mail)+
+ cdIn('CPF / CNPJ','doc',d.doc,'Digite para buscar o endereço pelo CNPJ')+(d.doc.replace(/\D/g,'').length===14?cdIn('Inscrição estadual','ie',d.ie,'vazio = não contribuinte'):'')+cdIn('Telefone','tel',d.tel)+cdIn('CEP','cep',d.cep,'00000-000')+cdIn('Endereço','end',d.end,'Rua, número · bairro')+cdIn('Cidade/UF','cid',d.cid,'Cidade/UF')+cdIn('E-mail','mail',d.mail)+
  '<p class="mu sm" style="margin:6px 0">'+esc(cdBusy?'Buscando dados…':(cdMsg||(falta?'Digite o CEP ou o CNPJ e o que faltar é preenchido sozinho. Você pode corrigir qualquer campo.':'Você pode corrigir qualquer campo.')))+'</p>'+
  '<div class="act"><button class="btn s" onclick="cdCopy(\'frete\')">Copiar dados para o frete</button>'+(o.cli&&cdDif(o)?'<button class="btn g s" onclick="cdSave('+o.id+')">Salvar no cadastro do cliente</button>':(o.cli?'<span class="mu sm">✓ igual ao cadastro</span>':''))+'</div></div>'}
 function cdRe(id){render();if(pcl['cd'+id])fO(id)}
@@ -1687,12 +1697,11 @@ async function cdAuto(id){const o=ord(id);if(!o||cdBusy)return;const d=cdDados(o
  const cep=d.cep.replace(/\D/g,''),doc=d.doc.replace(/\D/g,'');cdBusy=true;
  try{
   if(cep.length===8&&(!d.end||!d.cid)){const j=await(await fetch('https://viacep.com.br/ws/'+cep+'/json/')).json();if(!j.erro){put('end',[j.logradouro,j.bairro].filter(Boolean).join(' · '));put('cid',j.localidade?j.localidade+(j.uf?'/'+j.uf:''):'')}}
-  if(doc.length===14&&(!cdDados(o).cep||!cdDados(o).end||!cdDados(o).cid||!d.tel||!d.mail)){const j=await(await fetch('https://brasilapi.com.br/api/cnpj/v1/'+doc)).json();
-   if(j&&j.cep){const c8=String(j.cep).replace(/\D/g,'');put('cep',c8.slice(0,5)+'-'+c8.slice(5));put('end',[[j.logradouro,j.numero].filter(Boolean).join(', '),j.bairro].filter(Boolean).join(' · '));put('cid',j.municipio?j.municipio+(j.uf?'/'+j.uf:''):'');put('tel',j.ddd_telefone_1);put('mail',j.email?String(j.email).toLowerCase():'')}}
+  if(doc.length===14&&(!cdDados(o).cep||!cdDados(o).end||!cdDados(o).cid||!d.tel||!d.mail||!d.ie)){const j=await cnpjInfo(doc,(cdDados(o).cid.split('/')[1]||'').toUpperCase());put('cep',j.cep);put('end',j.end);put('cid',j.cid);put('tel',j.tel);put('mail',j.mail);put('ie',j.ie)}
   cdMsg=ch?'Campos em branco preenchidos automaticamente. Confira, corrija se precisar e salve no cadastro.':''}
  catch(e){cdMsg='Não consegui buscar os dados agora. Preencha manualmente.'}
  cdBusy=false;if(ch||cdMsg)cdRe(id)}
-function cdSave(id){const o=ord(id),c=o&&o.cli?cli(o.cli):null;if(!c)return;const d=cdDados(o);['doc','tel','mail','cep','end','cid'].forEach(k=>{if(d[k])c[k]=d[k]});cdMsg='Cadastro do cliente atualizado.';cdRe(id);toast('Cadastro do cliente atualizado')}
+function cdSave(id){const o=ord(id),c=o&&o.cli?cli(o.cli):null;if(!c)return;const d=cdDados(o);['doc','ie','tel','mail','cep','end','cid'].forEach(k=>{if(d[k])c[k]=d[k]});cdMsg='Cadastro do cliente atualizado.';cdRe(id);toast('Cadastro do cliente atualizado')}
 function cdCopy(k){const t=cdTx[k]||'';try{navigator.clipboard.writeText(t).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 /* ===== Gerar nota (emissão pelo NFeMail) ===== */
 const NFE_EM={xNome:'BOTOFE FABRICACAO E COMERCIO DE ARTIGOS RELIGIOSOS LTDA',xFant:'Maria Leticia Teixeira Santa Rosa',IE:'0804042300146',IM:'0804042300146',CNAE:'3299099',CRT:'1',CNPJ:'41134556000158',lgr:'Nucr Corrego do Torto Trecho 3',nro:'26',bairro:'Setor de Habitacoes Individuais Norte',cMun:'5300108',mun:'BRASILIA',UF:'DF',CEP:'71538500',fone:'61993071919'};
@@ -1709,8 +1718,9 @@ const nu=v=>{let s=(Math.round(v*1e10)/1e10).toFixed(10);while(s.endsWith('0')&&
 function nfDraft(id){const o=ord(id),c=cof(o),cc=o.cli?cli(o.cli):null;
  const doc=String(o.doc||(cc&&cc.doc)||'').replace(/\D/g,''),cep=String(o.cep||(cc&&cc.cep)||'').replace(/\D/g,''),end=String(o.end||(cc&&cc.end)||''),cid=String(o.cid||(cc&&cc.cid)||'');
  const pt=end.split(' · '),cm=/^(.*?),\s*(\d+[A-Za-z]?)$/.exec((pt[0]||'').trim()),cu=/^(.*)\/([A-Za-z]{2})$/.exec(cid.trim());
- nfd={id:id,nome:c.n||'',doc:doc,ie:'',cep:cep,lgr:cm?cm[1]:(pt[0]||''),nro:cm?cm[2]:'S/N',cpl:'',bairro:pt[1]||'',mun:cu?cu[1]:cid,uf:cu?cu[2].toUpperCase():'',ibge:'',fone:String((cc&&cc.tel)||o.lt||'').replace(/\D/g,''),mail:(cc&&cc.mail)||o.lm||'',fr:(+o.fr||0)>0,hd:true,ok:false,busy:false,msg:'',out:'',items:nfItens(o)};
- nfConf();nfCep()}
+ nfd={id:id,nome:c.n||'',doc:doc,ie:cdDados(o).ie||'',cep:cep,lgr:cm?cm[1]:(pt[0]||''),nro:cm?cm[2]:'S/N',cpl:'',bairro:pt[1]||'',mun:cu?cu[1]:cid,uf:cu?cu[2].toUpperCase():'',ibge:'',fone:String((cc&&cc.tel)||o.lt||'').replace(/\D/g,''),mail:(cc&&cc.mail)||o.lm||'',fr:(+o.fr||0)>0,hd:true,ok:false,busy:false,msg:'',out:'',items:nfItens(o)};
+ nfConf();nfCep();nfIe()}
+async function nfIe(){const d=nfd;if(!d||d.doc.length!==14||d.ie)return;const j=await cnpjInfo(d.doc,d.uf);if(nfd!==d||d.ie||!j.ie)return;d.ie=j.ie;if(!d.busy)nfConf()}
 async function nfCep(){const d=nfd;if(!d||d.cep.length!==8)return;
  try{const r=await fetch('https://viacep.com.br/ws/'+d.cep+'/json/'),j=await r.json();if(nfd!==d||j.erro)return;
   d.ibge=j.ibge||d.ibge;if(!d.lgr)d.lgr=j.logradouro||'';if(!d.bairro)d.bairro=j.bairro||'';if(!d.mun)d.mun=j.localidade||'';if(!d.uf)d.uf=j.uf||'';
@@ -1719,7 +1729,7 @@ async function nfCep(){const d=nfd;if(!d||d.cep.length!==8)return;
 function nfF(k,v){if(!nfd)return;nfd[k]=v;if(k==='cep'){nfd.cep=v.replace(/\D/g,'').slice(0,8);nfd.ibge='';nfCep()}if(k==='doc')nfd.doc=v.replace(/\D/g,'');if(k==='uf')nfd.uf=v.toUpperCase().slice(0,2);nfConf()}
 function nfCalc(d){const o=ord(d.id),it=d.items,fr=d.fr?Math.max(0,+o.fr||0):0,bp=it.reduce((s,x)=>s+x.vp,0);
  let rest=Math.round(fr*100),acc=0;const fs=it.map((x,i)=>{if(i===it.length-1)return rest/100;const v=Math.floor(fr*100*x.vp/bp+1e-6);rest-=v;return v/100});
- const dest=d.uf==='DF';return{o:o,fr:fr,bp:bp,fs:fs,vnf:Math.round((bp+fr)*100)/100,cfop:dest?'5101':'6101',idd:dest?1:2,cnpj:d.doc.length===14,ie:d.doc.length===14&&d.ie.replace(/\D/g,'')!==''}}
+ const dest=d.uf==='DF';return{o:o,fr:fr,bp:bp,fs:fs,vnf:Math.round((bp+fr)*100)/100,cfop:dest?'5101':'6101',idd:dest?1:2,cnpj:d.doc.length===14,ie:d.doc.length===14&&d.ie.replace(/\D/g,'')!=='',iso:d.doc.length===14&&/isent/i.test(d.ie)}}
 function nfErr(d){const o=ord(d.id),e=[],k=nfCalc(d);
  if(!d.items.length)e.push('O pedido não tem itens.');if(!d.nome.trim())e.push('Falta o nome do destinatário.');
  if(d.doc.length!==11&&d.doc.length!==14)e.push('CPF (11 números) ou CNPJ (14 números) inválido.');
@@ -1733,7 +1743,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  a('A','4.00','');
  a('B','53','','Venda de produção do estabelecimento','55','1','',now,'','1',k.idd,E.cMun,'1','1','','1','1',k.cnpj&&k.ie?'0':'1','2','0','0','','','');
  a('C',E.xNome,E.xFant,E.IE,'',E.IM,E.CNAE,E.CRT);a('C02',E.CNPJ);a('C05',E.lgr,E.nro,'',E.bairro,E.cMun,E.mun,E.UF,E.CEP,'1058','BRASIL',E.fone);
- a('E',d.nome,k.cnpj&&k.ie?'1':'9',k.cnpj&&k.ie?d.ie.replace(/\D/g,''):'','','',d.mail);a(k.cnpj?'E02':'E03',d.doc);
+ a('E',d.nome,k.cnpj&&k.ie?'1':(k.iso?'2':'9'),k.cnpj&&k.ie?d.ie.replace(/\D/g,''):'','','',d.mail);a(k.cnpj?'E02':'E03',d.doc);
  a('E05',d.lgr,d.nro||'S/N',d.cpl,d.bairro,d.ibge,d.mun,d.uf,d.cep,'1058','BRASIL',d.fone);
  d.items.forEach((x,i)=>{const n=i+1,nt=x.ncm==='33073000';
   a('H',n,x.inf);
@@ -1748,8 +1758,8 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  return 'NOTAFISCAL|1|\n'+L.join('\n')+'\n'}   /* o NFeMail só aceita com esta linha de cabeçalho (sem ela: 400 The request is invalid) */
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
- open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 18/11-e</span></p>'+
- '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 19/11-a</span></p>'+
+ '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte; "ISENTO" se for isento)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
  f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
  '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
  '<div class="card tw"><table class="fx" style="min-width:0"><thead><tr><th>Item da nota</th><th class="r">Qtd</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>'+
