@@ -413,7 +413,7 @@ function vC(){
 }
 let foto='';
 function fC(id){
- const c=id?cli(id):(cfromN?{n:dr.nome||'',doc:dr.doc||'',cat:dr.tab||'Varejo',tel:dr.lt||'',mail:dr.lm||'',cep:dr.cep||'',end:dr.end||'',cid:dr.cid||'',obs:''}:{n:'',doc:'',cat:'Varejo',tel:'',mail:'',cep:'',end:'',cid:'',obs:''});foto=c.foto||'';
+ const c=id?cli(id):(cfromN?{n:dr.nome||'',doc:dr.doc||'',cat:dr.tab||'Varejo',tel:dr.lt||'',mail:dr.lm||'',cep:dr.cep||'',end:dr.end||'',nro:dr.nro||'',bai:dr.bai||'',cid:dr.cid||'',obs:''}:{n:'',doc:'',cat:'Varejo',tel:'',mail:'',cep:'',end:'',nro:'',bai:'',cid:'',obs:''});foto=c.foto||'';const A=adr(c);
  ced=JSON.parse(JSON.stringify((id&&c.esp)||{}));cedOpen={};
  open('<h2>'+(id?'Editar cliente':'Novo cliente')+'</h2><div class="fg">'+
  '<div class="f"><label for="a1">Nome / Razão social</label><input id="a1" value="'+esc(c.n)+'"></div>'+
@@ -424,7 +424,9 @@ function fC(id){
  '<div><label for="a5">E-mail</label><input id="a5" value="'+esc(c.mail)+'"></div>'+
  '<div><label for="a10">CEP</label><input id="a10" inputmode="numeric" maxlength="9" placeholder="00000-000" value="'+esc(c.cep||'')+'" oninput="cepIn(this)"></div>'+
  '<div><label for="a7">Cidade / UF</label><input id="a7" value="'+esc(c.cid)+'"></div>'+
- '<div class="f"><label for="a6">Endereço</label><input id="a6" value="'+esc(c.end)+'"><p class="mu" id="cepm" style="margin:6px 0 0">Digite o CEP (ou o CNPJ) e o endereço e a inscrição estadual são preenchidos sozinhos. Você pode corrigir os campos se precisar.</p></div>'+
+ '<div class="f"><label for="a6">Endereço (rua, quadra...)</label><input id="a6" value="'+esc(A.end)+'"><p class="mu" id="cepm" style="margin:6px 0 0">Digite o CEP (ou o CNPJ) e o endereço, o bairro e a inscrição estadual são preenchidos sozinhos. Você pode corrigir os campos se precisar.</p></div>'+
+ '<div><label for="a12">Número</label><input id="a12" value="'+esc(A.nro)+'" placeholder="Ex.: 123 ou S/N"></div>'+
+ '<div><label for="a13">Bairro</label><input id="a13" value="'+esc(A.bai)+'"></div>'+
  '<div class="f"><label for="a9">Logo ou foto</label><div class="who"><span class="av" id="pv">'+(foto?'<img src="'+foto+'" alt="">':'＋')+'</span><input id="a9" type="file" accept="image/*" onchange="pfo(this)"></div></div>'+
  '<div class="f"><label for="a8">Observações</label><textarea id="a8" rows="2">'+esc(c.obs)+'</textarea></div></div>'+
  '<div class="sec" id="espw"></div>'+'<div class="act">'+(id?'<button class="btn dg" style="margin-right:auto" onclick="askCli('+id+')">Excluir cliente</button>':'')+'<button class="btn g" onclick="cancC()">Cancelar</button><button class="btn" onclick="sC('+(id||0)+')">'+(cfromN?'Cadastrar e usar no pedido':'Salvar')+'</button></div>',0,cfromN);
@@ -433,6 +435,10 @@ function fC(id){
 let cfromN=false;
 function cadN(){if(!(dr.nome||'').trim())return toast('Digite o nome do cliente no campo Cliente');cfromN=true;fC()}
 function cancC(){if(cfromN){cfromN=false;rN()}else closeM()}
+function adr(x){x=x||{};if(x.nro||x.bai)return{end:String(x.end||''),nro:String(x.nro||''),bai:String(x.bai||'')};const pt=String(x.end||'').split(' · '),m=/^(.*?),\s*(\d+[A-Za-z]?|S\/N)$/i.exec((pt[0]||'').trim());return{end:m?m[1]:(pt[0]||''),nro:m?m[2]:'',bai:pt.slice(1).join(' · ')}}
+function endTxt(x){const a=adr(x);return[[a.end,a.nro].filter(Boolean).join(', '),a.bai].filter(Boolean).join(' · ')}
+function normO(o){if(o&&o.end&&!o.nro&&!o.bai){const a=adr(o);o.end=a.end;o.nro=a.nro;o.bai=a.bai}}
+function adrO(o){return(o.end!=null||o.nro!=null||o.bai!=null)?adr(o):adr(o.cli&&cli(o.cli))}
 let cepTk=0;
 async function cepN(el){
  const d=el.value.replace(/\D/g,'').slice(0,8);el.value=d.length>5?d.slice(0,5)+'-'+d.slice(5):d;dr.cep=el.value;
@@ -441,7 +447,7 @@ async function cepN(el){
  try{
   const r=await fetch('https://viacep.com.br/ws/'+d+'/json/'),j=await r.json();if(tk!==cepTk||!$('#n15'))return;
   if(j.erro){m.textContent='CEP não encontrado. Preencha o endereço manualmente.';return}
-  dr.end=[j.logradouro,j.bairro].filter(Boolean).join(' · ');dr.cid=(j.localidade||'')+(j.uf?'/'+j.uf:'');$('#n15').value=dr.end;$('#n16').value=dr.cid;
+  dr.end=j.logradouro||'';dr.bai=j.bairro||'';dr.cid=(j.localidade||'')+(j.uf?'/'+j.uf:'');$('#n15').value=dr.end;if($('#n21'))$('#n21').value=dr.bai;$('#n16').value=dr.cid;
   m.textContent='Endereço preenchido. Você pode editar se precisar.';
  }catch(e){if(tk===cepTk&&$('#n14m'))$('#n14m').textContent='Não consegui buscar o CEP agora. Preencha o endereço manualmente.'}
 }
@@ -452,19 +458,19 @@ async function cepIn(el){
  try{
   const r=await fetch('https://viacep.com.br/ws/'+d+'/json/'),j=await r.json();if(tk!==cepTk||!$('#a6'))return;
   if(j.erro){m.textContent='CEP não encontrado. Preencha o endereço manualmente.';return}
-  $('#a6').value=[j.logradouro,j.bairro].filter(Boolean).join(' · ');$('#a7').value=(j.localidade||'')+(j.uf?'/'+j.uf:'');
+  $('#a6').value=j.logradouro||'';if($('#a13'))$('#a13').value=j.bairro||'';$('#a7').value=(j.localidade||'')+(j.uf?'/'+j.uf:'');
   m.textContent='Endereço preenchido. Você pode editar se precisar.';
  }catch(e){if(tk===cepTk&&$('#cepm'))$('#cepm').textContent='Não consegui buscar o CEP agora. Preencha o endereço manualmente.'}
 }
 async function cnpjC(){const el=$('#a2');if(!el)return;const n=el.value.replace(/\D/g,''),m=$('#cepm');if(n.length!==14)return;if(m)m.textContent='Buscando dados do CNPJ…';
  const set=(id,v)=>{const e=$('#'+id);if(e&&v&&!e.value.trim())e.value=v},j=await cnpjInfo(n,($('#a7')&&$('#a7').value.split('/')[1]||'').trim().toUpperCase());
- if(!$('#a2')||$('#a2').value.replace(/\D/g,'')!==n)return;set('a10',j.cep);set('a6',j.end);set('a7',j.cid);set('a4',j.tel);set('a5',j.mail);set('a11',j.ie);
+ if(!$('#a2')||$('#a2').value.replace(/\D/g,'')!==n)return;set('a10',j.cep);set('a6',j.end);set('a12',j.nro);set('a13',j.bai);set('a7',j.cid);set('a4',j.tel);set('a5',j.mail);set('a11',j.ie);
  if($('#cepm'))$('#cepm').textContent=j.ie?'Dados do CNPJ preenchidos, com a inscrição estadual. Confira antes de salvar.':(j.cep?'Dados do CNPJ preenchidos. Não achei a inscrição estadual na consulta pública: digite se o cliente tiver (vazio = não contribuinte).':'Não consegui buscar este CNPJ agora. Preencha manualmente.')}
 function pfo(i){const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{foto=r.result;$('#pv').innerHTML='<img src="'+foto+'" alt="">'};r.readAsDataURL(f)}
 function sC(id){
  const n=$('#a1').value.trim();if(!n)return toast('Informe o nome do cliente');
- const d={n:n,doc:$('#a2').value,ie:$('#a11').value.trim(),cat:$('#a3').value,tel:$('#a4').value,mail:$('#a5').value,cep:$('#a10').value,end:$('#a6').value,cid:$('#a7').value,obs:$('#a8').value,foto:foto,esp:Object.keys(ced).length?ced:undefined};
- if(id)Object.assign(cli(id),d);else{const nid=Math.max.apply(null,[0].concat(C.map(x=>x.id)))+1;C.push(Object.assign({id:nid},d));if(cfromN){cfromN=false;dr.cli=nid;dr.nome='';dr.pm='tabela';dr.tc='';dr.cep=d.cep;dr.end=d.end;dr.cid=d.cid;dr.doc=d.doc;dr.hl=false;render();rN();return toast('Cliente cadastrado e vinculado ao pedido')}}
+ const d={n:n,doc:$('#a2').value,ie:$('#a11').value.trim(),cat:$('#a3').value,tel:$('#a4').value,mail:$('#a5').value,cep:$('#a10').value,end:$('#a6').value.trim(),nro:$('#a12').value.trim(),bai:$('#a13').value.trim(),cid:$('#a7').value,obs:$('#a8').value,foto:foto,esp:Object.keys(ced).length?ced:undefined};
+ if(id)Object.assign(cli(id),d);else{const nid=Math.max.apply(null,[0].concat(C.map(x=>x.id)))+1;C.push(Object.assign({id:nid},d));if(cfromN){cfromN=false;dr.cli=nid;dr.nome='';dr.pm='tabela';dr.tc='';dr.cep=d.cep;dr.end=d.end;dr.nro=d.nro;dr.bai=d.bai;dr.cid=d.cid;dr.doc=d.doc;dr.hl=false;render();rN();return toast('Cliente cadastrado e vinculado ao pedido')}}
  close();render();toast('Cliente salvo (exemplo)');
 }
 
@@ -673,7 +679,7 @@ function rN(){
 (dr.cc?'':'<div class="fg">'+
  '<div><label for="n1">Cliente</label>'+acBox('n1','Escolha um cliente ou digite um nome',cn,'setCli(this.value)')+'</div>'+
  (dr.cli?'':'<div><label for="n1t">WhatsApp / telefone do contato</label><input id="n1t" value="'+esc(dr.lt||'')+'" placeholder="(00) 00000-0000" onchange="dr.lt=this.value"></div><div><label for="n1m">E-mail do contato</label><input id="n1m" type="email" value="'+esc(dr.lm||'')+'" placeholder="contato@exemplo.com" onchange="dr.lm=this.value"></div>')+
- '<div><label for="n18">CPF / CNPJ</label><input id="n18" value="'+esc(dr.doc||'')+'" placeholder="Opcional" onchange="dr.doc=this.value;rN()"></div><div><label for="n14">CEP</label><input id="n14" inputmode="numeric" maxlength="9" placeholder="00000-000" value="'+esc(dr.cep||'')+'" oninput="cepN(this)"></div><div><label for="n16">Cidade / UF</label><input id="n16" value="'+esc(dr.cid||'')+'" onchange="dr.cid=this.value"></div><div class="f"><label for="n15">Endereço</label><input id="n15" value="'+esc(dr.end||'')+'" onchange="dr.end=this.value"><p class="mu" id="n14m" style="margin:6px 0 0">Digite o CEP e o endereço é preenchido sozinho. Vale para este pedido.</p></div>'+updBlk()+
+ '<div><label for="n18">CPF / CNPJ</label><input id="n18" value="'+esc(dr.doc||'')+'" placeholder="Opcional" onchange="dr.doc=this.value;rN()"></div><div><label for="n14">CEP</label><input id="n14" inputmode="numeric" maxlength="9" placeholder="00000-000" value="'+esc(dr.cep||'')+'" oninput="cepN(this)"></div><div><label for="n16">Cidade / UF</label><input id="n16" value="'+esc(dr.cid||'')+'" onchange="dr.cid=this.value"></div><div class="f"><label for="n15">Endereço (rua, quadra...)</label><input id="n15" value="'+esc(dr.end||'')+'" onchange="dr.end=this.value"><p class="mu" id="n14m" style="margin:6px 0 0">Digite o CEP e o endereço é preenchido sozinho. Vale para este pedido.</p></div><div><label for="n20">Número</label><input id="n20" value="'+esc(dr.nro||'')+'" placeholder="Ex.: 123 ou S/N" onchange="dr.nro=this.value.trim()"></div><div><label for="n21">Bairro</label><input id="n21" value="'+esc(dr.bai||'')+'" onchange="dr.bai=this.value.trim()"></div>'+updBlk()+
 '</div>'+
  (dr.cli?'<div class="fg"><div><label for="n8">Tabela de preço deste pedido</label><select id="n8" onchange="setTc(this.value)">'+CATS.map(k=>'<option value="'+k+'" '+(c.cat===k?'selected':'')+'>'+k+(k===cli(dr.cli).cat?' (cadastro do cliente)':'')+'</option>').join('')+'</select></div></div><p class="mu" style="margin:6px 0 0">A tabela do cadastro é aplicada automaticamente; aqui você pode usar outra só neste pedido.</p>'+(nEsp?'<div class="fg"><div><label for="n9">Preços deste cliente ('+nEsp+(nEsp===1?' produto negociado':' produtos negociados')+')</label><select id="n9" onchange="dr.pm=this.value;rN()"><option value="tabela" '+(dr.pm==='negociado'?'':'selected')+'>Tabela da categoria (original)</option><option value="negociado" '+(dr.pm==='negociado'?'selected':'')+'>Preços do orçamento anterior (negociados)</option></select></div></div>':''):'<div class="note">Cliente não cadastrado: digite um nome provisório ou deixe em branco e vincule o cliente depois. Os preços são recalculados quando um cliente cadastrado for escolhido.</div><div class="act" style="justify-content:flex-start;margin:0 0 10px"><button class="btn gold'+(dr.hl?' hl':'')+'" onclick="cadN()">Cadastrar cliente com estes dados</button></div><div class="fg"><div><label for="n8">Tabela de preço enquanto não há cliente</label><select id="n8" onchange="dr.tab=this.value;rN()">'+CATS.map(k=>'<option '+(dr.tab===k?'selected':'')+'>'+k+'</option>').join('')+'</select></div></div>'
 ))+
@@ -703,15 +709,15 @@ function setPr(i,v){
 }
 function updBlk(){
  if(!dr.cli)return '';const c=cli(dr.cli);
- const df=(dr.doc||'')!==(c.doc||'')||(dr.cep||'')!==(c.cep||'')||(dr.end||'')!==(c.end||'')||(dr.cid||'')!==(c.cid||'');
+ const df=(dr.doc||'')!==(c.doc||'')||(dr.cep||'')!==(c.cep||'')||(dr.end||'')!==adr(c).end||(dr.nro||'')!==adr(c).nro||(dr.bai||'')!==adr(c).bai||(dr.cid||'')!==(c.cid||'');
  return df?'<div class="f note" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:200px">Você alterou dados do cliente neste pedido. Quer atualizar o cadastro também? (opcional)</span><button class="btn g s" onclick="updCli()">Atualizar cadastro</button></div>':'';
 }
-function updCli(){const c=cli(dr.cli);c.doc=dr.doc||'';c.cep=dr.cep||'';c.end=dr.end||'';c.cid=dr.cid||'';rN();toast('Cadastro do cliente atualizado')}
+function updCli(){const c=cli(dr.cli);c.doc=dr.doc||'';c.cep=dr.cep||'';c.end=dr.end||'';c.nro=dr.nro||'';c.bai=dr.bai||'';c.cid=dr.cid||'';rN();toast('Cadastro do cliente atualizado')}
 function needCad(){dr.hl=true;dr.cc=false;rN();const e=$('#n1');if(e){e.scrollIntoView({block:'center'});setTimeout(()=>{try{e.focus()}catch(x){}},50)}toast('Cadastre o cliente antes de confirmar: use o botão destacado')}
 function togCl(){dr.cc=!dr.cc;rN()}
 function setPg(v){dr.pg=v;if(v==='Pix'){if(!(dr.desc>0)||dr.da){dr.desc=5;dr.da=true}}else if(dr.da){dr.desc=0;dr.da=false}rN()}
 function setTc(v){dr.tc=(dr.cli&&v===cli(dr.cli).cat)?'':v;rN()}
-function setCli(v){v=v.trim();dr.tc='';if(dr.cli&&cli(dr.cli).n.toLowerCase()===v.toLowerCase())return;if(!dr.cli&&v===(dr.nome||''))return;const c=C.find(x=>x.n.toLowerCase()===v.toLowerCase());if(c){dr.cli=c.id;dr.nome='';dr.cep=c.cep||'';dr.end=c.end||'';dr.cid=c.cid||'';dr.doc=c.doc||'';dr.hl=false;const ng=c.esp&&Object.keys(c.esp).length;dr.pm=ng?'negociado':'tabela';rN();if(ng)toast('Preços negociados com este cliente aplicados (dá para alterar)');return}else{dr.cli=0;dr.nome=v;dr.pm='tabela'}rN()}
+function setCli(v){v=v.trim();dr.tc='';if(dr.cli&&cli(dr.cli).n.toLowerCase()===v.toLowerCase())return;if(!dr.cli&&v===(dr.nome||''))return;const c=C.find(x=>x.n.toLowerCase()===v.toLowerCase());if(c){dr.cli=c.id;dr.nome='';dr.cep=c.cep||'';{const A=adr(c);dr.end=A.end;dr.nro=A.nro;dr.bai=A.bai}dr.cid=c.cid||'';dr.doc=c.doc||'';dr.hl=false;const ng=c.esp&&Object.keys(c.esp).length;dr.pm=ng?'negociado':'tabela';rN();if(ng)toast('Preços negociados com este cliente aplicados (dá para alterar)');return}else{dr.cli=0;dr.nome=v;dr.pm='tabela'}rN()}
 const nrm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 function kitKey(id){
  id=id||'kb';const v=nrm($('#'+id).value);if(!v){toast('Digite ou escolha a categoria do produto');return null}
@@ -855,7 +861,7 @@ function fCX(){
  open('<h2>Clientes excluídos</h2><p class="mu">Os dados ficam guardados para o caso de precisar recuperar. Restaurar devolve o cadastro e religa os pedidos dele.</p>'+
  (cxs.length?'<div class="bar sel"><b>'+cxs.length+(cxs.length===1?' selecionado':' selecionados')+'</b><button class="btn s" onclick="restSel()">Restaurar selecionados</button><button class="btn g s" onclick="cxs=[];fCX()">Limpar seleção</button></div>':'')+
  '<div class="card tw"><table class="fx" style="min-width:0"><thead><tr><th style="width:6%"><input type="checkbox" aria-label="Selecionar todos" '+(CX.length&&cxs.length===CX.length?'checked':'')+' onchange="cxs=this.checked?CX.map((_,i)=>i):[];fCX()"></th><th style="width:28%">Cliente</th><th style="width:30%">Contato</th><th style="width:20%">Excluído em</th><th style="width:16%"></th></tr></thead><tbody>'+
- (CX.map((x,i)=>'<tr><td><input type="checkbox" aria-label="Selecionar '+esc(x.c.n)+'" '+(cxs.indexOf(i)>=0?'checked':'')+' onchange="cxT('+i+')"></td><td>'+esc(x.c.n)+' '+cat(x.c)+'<div class="mu">'+esc([x.c.doc,x.c.cep,x.c.end,x.c.cid].filter(Boolean).join(' · '))+'</div>'+
+ (CX.map((x,i)=>'<tr><td><input type="checkbox" aria-label="Selecionar '+esc(x.c.n)+'" '+(cxs.indexOf(i)>=0?'checked':'')+' onchange="cxT('+i+')"></td><td>'+esc(x.c.n)+' '+cat(x.c)+'<div class="mu">'+esc([x.c.doc,x.c.cep,endTxt(x.c),x.c.cid].filter(Boolean).join(' · '))+'</div>'+
   '<div style="margin-top:6px"><label for="cxj'+i+'" style="margin:0 0 2px">Motivo da exclusão</label><div class="row2"><input id="cxj'+i+'" value="'+esc(x.j||'')+'" placeholder="Escreva o motivo"><button class="btn g s" onclick="cxJ('+i+')">Salvar motivo</button></div></div></td>'+
   '<td class="mu">'+esc(x.c.tel)+'<br>'+esc(x.c.mail)+'</td><td class="mu">'+fd(x.d)+'<div>'+x.ords.length+(x.ords.length===1?' pedido':' pedidos')+'</div></td><td class="r"><button class="btn g s" onclick="restCli('+i+')">Restaurar</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">Nenhum cliente excluído.</td></tr>')+'</tbody></table></div><div class="act"><button class="btn g" onclick="closeM()">Fechar</button></div>');
 }
@@ -944,7 +950,7 @@ async function pdfBuild(o,lg){
  T(M,y,'CLIENTE',10,true,'l',0);T(330,y,'CONDIÇÕES',10,true,'l',0);y+=15;
  const y0=y;
  T(M,y,c.n,12.5,true);y+=15;
- const l1=[];if(c.doc)l1.push('CNPJ/CPF: '+c.doc);if(c.tel)l1.push('Tel.: '+c.tel);if(c.mail)l1.push(c.mail);if(c.end||c.cid)l1.push([c.end,c.cid].filter(Boolean).join(' · '));
+ const l1=[];if(c.doc)l1.push('CNPJ/CPF: '+c.doc);if(c.tel)l1.push('Tel.: '+c.tel);if(c.mail)l1.push(c.mail);if(c.end||c.cid)l1.push([endTxt(c),c.cid].filter(Boolean).join(' · '));
  l1.forEach(s=>{T(M,y,s,10,false,'l',.1);y+=13});
  let y2=y0;
  [['Pagamento',o.pg],['Prazo de fabricação',pzTxt(o)]].concat(o.tr?[['Transportadora',o.tr+(o.trp?' · '+o.trp+' dias úteis':'')]]:[]).forEach(a=>{T(330,y2,a[0]+': ',10,false,'l',.12);T(330+pdfW(a[0]+': ',10,false),y2,a[1],10,true);y2+=15});
@@ -1087,11 +1093,11 @@ function cfAdd(){
 function sN(st){
  if(!dr.it.length)return toast('Adicione ao menos um item');
  if(st&&!dr.cli)return needCad();
- const o={id:Math.max.apply(null,[0].concat(O.map(x=>x.id)))+1,cli:dr.cli||null,nome:dr.cli?'':dr.nome,tab:dr.tab,pm:dr.pm,data:dr.data,conf:st?TODAY:'',it:dr.it.map(a=>a.slice()),desc:dr.desc,tx:dr.tx,pg:dr.pg,st:st,pz:dr.pz,pzTxt:dr.pzTxt,chk:{},nf:'',etq:false,rast:'',obs:dr.obs||'',br:(dr.br||[]).map(a=>a.slice()),fr:+dr.fr||0,tr:(dr.tr||'').trim(),lt:dr.lt||'',lm:dr.lm||'',cep:dr.cep||'',end:dr.end||'',cid:dr.cid||'',doc:dr.doc||'',trp:+dr.trp||0,pdfv:1,tc:dr.tc||''};
+ const o={id:Math.max.apply(null,[0].concat(O.map(x=>x.id)))+1,cli:dr.cli||null,nome:dr.cli?'':dr.nome,tab:dr.tab,pm:dr.pm,data:dr.data,conf:st?TODAY:'',it:dr.it.map(a=>a.slice()),desc:dr.desc,tx:dr.tx,pg:dr.pg,st:st,pz:dr.pz,pzTxt:dr.pzTxt,chk:{},nf:'',etq:false,rast:'',obs:dr.obs||'',br:(dr.br||[]).map(a=>a.slice()),fr:+dr.fr||0,tr:(dr.tr||'').trim(),lt:dr.lt||'',lm:dr.lm||'',cep:dr.cep||'',end:dr.end||'',nro:dr.nro||'',bai:dr.bai||'',cid:dr.cid||'',doc:dr.doc||'',trp:+dr.trp||0,pdfv:1,tc:dr.tc||''};
  O.push(o);if(st)freeze(o);saveEsp(o);close();render();toast(st?'Pedido #'+o.id+' confirmado e enviado para a produção':'Orçamento #'+o.id+' registrado');
  if(!st)pdfO(o.id);
 }
-function eO(id){const o=ord(id);if(o.st>=4)return toast('Pedido enviado não pode ser editado. Volte uma etapa para editar.');dr={id:id,st:o.st,pm:o.pm||'tabela',cli:o.cli||0,nome:o.nome||'',tab:o.tab||'Atacado',data:o.data,pz:o.pz,pzTxt:o.pzTxt,pg:o.pg,it:o.it.map(a=>a.slice()),desc:o.desc,tx:o.tx,obs:o.obs||'',br:(o.br||[]).map(a=>a.slice()),fr:o.fr||'',tr:o.tr||'',lt:o.lt||'',lm:o.lm||'',tc:o.tc||'',da:false,cep:o.cep!=null?o.cep:((o.cli&&cli(o.cli).cep)||''),end:o.end!=null?o.end:((o.cli&&cli(o.cli).end)||''),cid:o.cid!=null?o.cid:((o.cli&&cli(o.cli).cid)||''),doc:o.doc!=null?o.doc:((o.cli&&cli(o.cli).doc)||''),trp:o.trp||'',hl:false,cc:true,ph:false};rN()}
+function eO(id){const o=ord(id);if(o.st>=4)return toast('Pedido enviado não pode ser editado. Volte uma etapa para editar.');dr={id:id,st:o.st,pm:o.pm||'tabela',cli:o.cli||0,nome:o.nome||'',tab:o.tab||'Atacado',data:o.data,pz:o.pz,pzTxt:o.pzTxt,pg:o.pg,it:o.it.map(a=>a.slice()),desc:o.desc,tx:o.tx,obs:o.obs||'',br:(o.br||[]).map(a=>a.slice()),fr:o.fr||'',tr:o.tr||'',lt:o.lt||'',lm:o.lm||'',tc:o.tc||'',da:false,cep:o.cep!=null?o.cep:((o.cli&&cli(o.cli).cep)||''),end:adrO(o).end,nro:adrO(o).nro,bai:adrO(o).bai,cid:o.cid!=null?o.cid:((o.cli&&cli(o.cli).cid)||''),doc:o.doc!=null?o.doc:((o.cli&&cli(o.cli).doc)||''),trp:o.trp||'',hl:false,cc:true,ph:false};rN()}
 function sv(conf){
  if(!dr.it.length)return toast('Adicione ao menos um item');
  const o=ord(dr.id);
@@ -1099,7 +1105,7 @@ function sv(conf){
  const oldq={},newq={};allIt(o).forEach(([i,n])=>{oldq[i]=(oldq[i]||0)+n});dr.it.concat(dr.br||[]).forEach(([i,n])=>{newq[i]=(newq[i]||0)+n});
  if(o.st>=4){new Set(Object.keys(oldq).concat(Object.keys(newq))).forEach(k=>{const d=(newq[k]||0)-(oldq[k]||0);if(d!==0){const p=prod(+k);p.q-=d;V.unshift({d:TODAY,t:d>0?'Saída':'Entrada',i:'Pedido #'+o.id+' · ajuste de '+pfull(p),qt:-d})}})}
  const chk={},dn={};Object.keys(newq).forEach(k=>{const od=o.chk[k]?(oldq[k]||0):Math.min(oldq[k]||0,((o.dn||{})[k])||0);const nd=Math.min(od,newq[k]);if(nd>0){dn[k]=nd;if(nd>=newq[k])chk[k]=true}});
- o.cli=dr.cli||null;o.nome=dr.cli?'':dr.nome;o.tab=dr.tab;o.data=dr.data;o.pz=dr.pz;o.pzTxt=dr.pzTxt;o.pg=dr.pg;o.desc=dr.desc;o.tx=dr.tx;o.pm=dr.pm;o.tc=dr.tc||'';o.obs=dr.obs||'';o.lt=dr.lt||'';o.lm=dr.lm||'';o.cep=dr.cep||'';o.end=dr.end||'';o.cid=dr.cid||'';o.doc=dr.doc||'';o.trp=+dr.trp||0;o.br=(dr.br||[]).map(a=>a.slice());o.fr=+dr.fr||0;o.tr=(dr.tr||'').trim();o.pdfv=(o.pdfv||1)+1;o.it=dr.it.map(a=>a.slice());o.it.forEach(r=>{if(r[2]!=null)r[3]=r[2]});o.chk=chk;o.dn=dn;
+ o.cli=dr.cli||null;o.nome=dr.cli?'':dr.nome;o.tab=dr.tab;o.data=dr.data;o.pz=dr.pz;o.pzTxt=dr.pzTxt;o.pg=dr.pg;o.desc=dr.desc;o.tx=dr.tx;o.pm=dr.pm;o.tc=dr.tc||'';o.obs=dr.obs||'';o.lt=dr.lt||'';o.lm=dr.lm||'';o.cep=dr.cep||'';o.end=dr.end||'';o.nro=dr.nro||'';o.bai=dr.bai||'';o.cid=dr.cid||'';o.doc=dr.doc||'';o.trp=+dr.trp||0;o.br=(dr.br||[]).map(a=>a.slice());o.fr=+dr.fr||0;o.tr=(dr.tr||'').trim();o.pdfv=(o.pdfv||1)+1;o.it=dr.it.map(a=>a.slice());o.it.forEach(r=>{if(r[2]!=null)r[3]=r[2]});o.chk=chk;o.dn=dn;
  let msg='Alterações salvas';
  if(conf&&o.st===0){o.st=1;o.conf=TODAY;msg='Pedido confirmado e enviado para a produção'}
  else if(o.st===3&&!o.it.every(([i])=>o.chk[i])){o.st=2;msg='Alterações salvas: o pedido voltou para Produção'}
@@ -1671,37 +1677,37 @@ async function nfVer(path,q){nfBusy=true;nfMsg='Consultando '+path+'…';render(
 function nfCopy(){try{navigator.clipboard.writeText(nfOut).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 /* consulta pública por CNPJ: endereço/contato (BrasilAPI) e inscrição estadual (CNPJ.ws) */
 async function cnpjInfo(doc,uf){const r={};
- try{const j=await(await fetch('https://brasilapi.com.br/api/cnpj/v1/'+doc)).json();if(j&&j.cep){const c8=String(j.cep).replace(/\D/g,'');r.cep=c8.slice(0,5)+'-'+c8.slice(5);r.end=[[j.logradouro,j.numero].filter(Boolean).join(', '),j.bairro].filter(Boolean).join(' · ');r.cid=j.municipio?j.municipio+(j.uf?'/'+j.uf:''):'';r.tel=j.ddd_telefone_1||'';r.mail=j.email?String(j.email).toLowerCase():'';r.uf=j.uf||''}}catch(e){}
+ try{const j=await(await fetch('https://brasilapi.com.br/api/cnpj/v1/'+doc)).json();if(j&&j.cep){const c8=String(j.cep).replace(/\D/g,'');r.cep=c8.slice(0,5)+'-'+c8.slice(5);r.end=String(j.logradouro||'').trim();r.nro=String(j.numero||'').trim();r.bai=String(j.bairro||'').trim();r.cid=j.municipio?j.municipio+(j.uf?'/'+j.uf:''):'';r.tel=j.ddd_telefone_1||'';r.mail=j.email?String(j.email).toLowerCase():'';r.uf=j.uf||''}}catch(e){}
  try{const j=await(await fetch('https://publica.cnpj.ws/cnpj/'+doc)).json(),L=(j&&j.estabelecimento&&j.estabelecimento.inscricoes_estaduais)||[],u=uf||r.uf||'',f=L.filter(x=>x.ativo!==false),q=f.find(x=>x.estado&&x.estado.sigla===u)||f[0];if(q&&q.inscricao_estadual)r.ie=String(q.inscricao_estadual)}catch(e){}
  return r}
 /* dados do cliente no pedido (clique no nome): preenche o que falta (CEP→ViaCEP, CNPJ→BrasilAPI), permite editar e salvar no cadastro */
-const CDM={doc:'doc',tel:'lt',mail:'lm',cep:'cep',end:'end',cid:'cid',ie:'ie'};
+const CDM={doc:'doc',tel:'lt',mail:'lm',cep:'cep',end:'end',nro:'nro',bai:'bai',cid:'cid',ie:'ie'};
 function cdDados(o){const c=o.cli?cli(o.cli):null,x=(a,b)=>String(a||b||'').trim();
- return{nome:x(c&&c.n,o.nome),doc:x(o.doc,c&&c.doc),tel:x(o.lt,c&&c.tel),mail:x(o.lm,c&&c.mail),ie:x(o.ie,c&&c.ie),cep:x(o.cep,c&&c.cep),end:x(o.end,c&&c.end),cid:x(o.cid,c&&c.cid)}}
+ return{nome:x(c&&c.n,o.nome),doc:x(o.doc,c&&c.doc),tel:x(o.lt,c&&c.tel),mail:x(o.lm,c&&c.mail),ie:x(o.ie,c&&c.ie),cep:x(o.cep,c&&c.cep),end:x(adr(o).end,adr(c||{}).end),nro:x(adr(o).nro,adr(c||{}).nro),bai:x(adr(o).bai,adr(c||{}).bai),cid:x(o.cid,c&&c.cid)}}
 const cdIn=(l,k,v,ph)=>'<div class="row2" style="align-items:center;gap:8px;margin:4px 0"><label class="mu" style="min-width:86px">'+l+'</label><input style="flex:1;min-width:0" value="'+esc(v)+'" placeholder="'+esc(ph||'')+'" aria-label="'+l+'" onchange="cdSet(\''+k+'\',this.value)">'+(v?'<button class="btn g s" onclick="cdCopy(\''+k+'\')" aria-label="Copiar '+l+'">Copiar</button>':'')+'</div>';
 let cdTx={},cdId=0,cdBusy=false,cdMsg='';
-function cdDif(o){const c=o.cli?cli(o.cli):null;if(!c)return false;const d=cdDados(o);return[['doc','doc'],['ie','ie'],['tel','tel'],['mail','mail'],['cep','cep'],['end','end'],['cid','cid']].some(a=>d[a[0]]&&d[a[0]]!==String(c[a[1]]||'').trim())}
-function cdBox(o){if(!pcl['cd'+o.id])return '';const d=cdDados(o);cdId=o.id;cdTx=Object.assign({},d,{frete:['Nome: '+d.nome,'CPF/CNPJ: '+d.doc,'Telefone: '+d.tel,'CEP: '+d.cep,'Endereço: '+[d.end,d.cid].filter(Boolean).join(' · ')].join('\n')});
- const falta=!d.doc||!d.tel||!d.cep||!d.end||!d.cid||(d.doc.replace(/\D/g,'').length===14&&!d.ie);
+function cdDif(o){const c=o.cli?cli(o.cli):null;if(!c)return false;const d=cdDados(o);return(()=>{const ac=adr(c);return[['doc','doc'],['ie','ie'],['tel','tel'],['mail','mail'],['cep','cep'],['end','end'],['nro','nro'],['bai','bai'],['cid','cid']].some(a=>d[a[0]]&&d[a[0]]!==String(['end','nro','bai'].indexOf(a[0])>=0?ac[a[0]]:(c[a[1]]||'')).trim())})()}
+function cdBox(o){if(!pcl['cd'+o.id])return '';const d=cdDados(o);cdId=o.id;cdTx=Object.assign({},d,{frete:['Nome: '+d.nome,'CPF/CNPJ: '+d.doc,'Telefone: '+d.tel,'CEP: '+d.cep,'Endereço: '+[endTxt(d),d.cid].filter(Boolean).join(' · ')].join('\n')});
+ const falta=!d.doc||!d.tel||!d.cep||!d.end||!d.nro||!d.bai||!d.cid||(d.doc.replace(/\D/g,'').length===14&&!d.ie);
  return '<div class="sec" style="margin:8px 0"><h4>Dados do cliente · frete</h4><div class="row2" style="gap:8px;margin:4px 0"><span class="mu" style="min-width:86px">Nome</span><b style="flex:1">'+esc(d.nome)+'</b><button class="btn g s" onclick="cdCopy(\'nome\')">Copiar</button></div>'+
- cdIn('CPF / CNPJ','doc',d.doc,'Digite para buscar o endereço pelo CNPJ')+(d.doc.replace(/\D/g,'').length===14?cdIn('Inscrição estadual','ie',d.ie,'vazio = não contribuinte'):'')+cdIn('Telefone','tel',d.tel)+cdIn('CEP','cep',d.cep,'00000-000')+cdIn('Endereço','end',d.end,'Rua, número · bairro')+cdIn('Cidade/UF','cid',d.cid,'Cidade/UF')+cdIn('E-mail','mail',d.mail)+
+ cdIn('CPF / CNPJ','doc',d.doc,'Digite para buscar o endereço pelo CNPJ')+(d.doc.replace(/\D/g,'').length===14?cdIn('Inscrição estadual','ie',d.ie,'vazio = não contribuinte'):'')+cdIn('Telefone','tel',d.tel)+cdIn('CEP','cep',d.cep,'00000-000')+cdIn('Endereço','end',d.end,'Rua, quadra...')+cdIn('Número','nro',d.nro,'Ex.: 123 ou S/N')+cdIn('Bairro','bai',d.bai)+cdIn('Cidade/UF','cid',d.cid,'Cidade/UF')+cdIn('E-mail','mail',d.mail)+
  '<p class="mu sm" style="margin:6px 0">'+esc(cdBusy?'Buscando dados…':(cdMsg||(falta?'Digite o CEP ou o CNPJ e o que faltar é preenchido sozinho. Você pode corrigir qualquer campo.':'Você pode corrigir qualquer campo.')))+'</p>'+
  '<div class="act"><button class="btn s" onclick="cdCopy(\'frete\')">Copiar dados para o frete</button>'+(o.cli&&cdDif(o)?'<button class="btn g s" onclick="cdSave('+o.id+')">Salvar no cadastro do cliente</button>':(o.cli?'<span class="mu sm">✓ igual ao cadastro</span>':''))+'</div></div>'}
 function cdRe(id){render();if(pcl['cd'+id])fO(id)}
 function togCd(id){pcl['cd'+id]=!pcl['cd'+id];cdMsg='';fO(id);if(pcl['cd'+id])cdAuto(id)}
-function cdSet(k,v){const o=ord(cdId);if(!o)return;v=String(v).trim();if(k==='doc'){const n=v.replace(/\D/g,'');v=n.length===11?n.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'):n.length===14?n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'):v}
+function cdSet(k,v){const o=ord(cdId);if(!o)return;v=String(v).trim();normO(o);if(k==='doc'){const n=v.replace(/\D/g,'');v=n.length===11?n.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'):n.length===14?n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'):v}
  if(k==='cep'){const n=v.replace(/\D/g,'').slice(0,8);v=n.length>5?n.slice(0,5)+'-'+n.slice(5):n}
  o[CDM[k]]=v;cdMsg='';cdRe(cdId);if(k==='cep'||k==='doc')cdAuto(cdId)}
-async function cdAuto(id){const o=ord(id);if(!o||cdBusy)return;const d=cdDados(o);let ch=false;
+async function cdAuto(id){const o=ord(id);if(o)normO(o);if(!o||cdBusy)return;const d=cdDados(o);let ch=false;
  const put=(k,v)=>{if(v&&!cdDados(o)[k]){o[CDM[k]]=String(v).trim();ch=true}};
  const cep=d.cep.replace(/\D/g,''),doc=d.doc.replace(/\D/g,'');cdBusy=true;
  try{
-  if(cep.length===8&&(!d.end||!d.cid)){const j=await(await fetch('https://viacep.com.br/ws/'+cep+'/json/')).json();if(!j.erro){put('end',[j.logradouro,j.bairro].filter(Boolean).join(' · '));put('cid',j.localidade?j.localidade+(j.uf?'/'+j.uf:''):'')}}
-  if(doc.length===14&&(!cdDados(o).cep||!cdDados(o).end||!cdDados(o).cid||!d.tel||!d.mail||!d.ie)){const j=await cnpjInfo(doc,(cdDados(o).cid.split('/')[1]||'').toUpperCase());put('cep',j.cep);put('end',j.end);put('cid',j.cid);put('tel',j.tel);put('mail',j.mail);put('ie',j.ie)}
+  if(cep.length===8&&(!d.end||!d.bai||!d.cid)){const j=await(await fetch('https://viacep.com.br/ws/'+cep+'/json/')).json();if(!j.erro){put('end',j.logradouro);put('bai',j.bairro);put('cid',j.localidade?j.localidade+(j.uf?'/'+j.uf:''):'')}}
+  if(doc.length===14&&(!cdDados(o).cep||!cdDados(o).end||!cdDados(o).nro||!cdDados(o).bai||!cdDados(o).cid||!d.tel||!d.mail||!d.ie)){const j=await cnpjInfo(doc,(cdDados(o).cid.split('/')[1]||'').toUpperCase());put('cep',j.cep);put('end',j.end);put('nro',j.nro);put('bai',j.bai);put('cid',j.cid);put('tel',j.tel);put('mail',j.mail);put('ie',j.ie)}
   cdMsg=ch?'Campos em branco preenchidos automaticamente. Confira, corrija se precisar e salve no cadastro.':''}
  catch(e){cdMsg='Não consegui buscar os dados agora. Preencha manualmente.'}
  cdBusy=false;if(ch||cdMsg)cdRe(id)}
-function cdSave(id){const o=ord(id),c=o&&o.cli?cli(o.cli):null;if(!c)return;const d=cdDados(o);['doc','ie','tel','mail','cep','end','cid'].forEach(k=>{if(d[k])c[k]=d[k]});cdMsg='Cadastro do cliente atualizado.';cdRe(id);toast('Cadastro do cliente atualizado')}
+function cdSave(id){const o=ord(id),c=o&&o.cli?cli(o.cli):null;if(!c)return;const d=cdDados(o);normO(c);['doc','ie','tel','mail','cep','end','nro','bai','cid'].forEach(k=>{if(d[k])c[k]=d[k]});cdMsg='Cadastro do cliente atualizado.';cdRe(id);toast('Cadastro do cliente atualizado')}
 function cdCopy(k){const t=cdTx[k]||'';try{navigator.clipboard.writeText(t).then(()=>toast('Copiado'),()=>toast('Não foi possível copiar'))}catch(e){toast('Não foi possível copiar')}}
 /* ===== Gerar nota (emissão pelo NFeMail) ===== */
 const NFE_EM={xNome:'BOTOFE FABRICACAO E COMERCIO DE ARTIGOS RELIGIOSOS LTDA',xFant:'Maria Leticia Teixeira Santa Rosa',IE:'0804042300146',IM:'0804042300146',CNAE:'3299099',CRT:'1',CNPJ:'41134556000158',lgr:'Nucr Corrego do Torto Trecho 3',nro:'26',bairro:'Setor de Habitacoes Individuais Norte',cMun:'5300108',mun:'BRASILIA',UF:'DF',CEP:'71538500',fone:'61993071919'};
@@ -1716,9 +1722,9 @@ function nfItens(o){const m={};o.it.forEach(r=>{const p=prod(r[0]),pr=ep(o,r),k=
  return L}
 const nu=v=>{let s=(Math.round(v*1e10)/1e10).toFixed(10);while(s.endsWith('0')&&s.split('.')[1].length>2)s=s.slice(0,-1);return s};
 function nfDraft(id){const o=ord(id),c=cof(o),cc=o.cli?cli(o.cli):null;
- const doc=String(o.doc||(cc&&cc.doc)||'').replace(/\D/g,''),cep=String(o.cep||(cc&&cc.cep)||'').replace(/\D/g,''),end=String(o.end||(cc&&cc.end)||''),cid=String(o.cid||(cc&&cc.cid)||'');
- const pt=end.split(' · '),cm=/^(.*?),\s*(\d+[A-Za-z]?)$/.exec((pt[0]||'').trim()),cu=/^(.*)\/([A-Za-z]{2})$/.exec(cid.trim());
- nfd={id:id,nome:c.n||'',doc:doc,ie:cdDados(o).ie||'',cep:cep,lgr:cm?cm[1]:(pt[0]||''),nro:cm?cm[2]:'S/N',cpl:'',bairro:pt[1]||'',mun:cu?cu[1]:cid,uf:cu?cu[2].toUpperCase():'',ibge:'',fone:String((cc&&cc.tel)||o.lt||'').replace(/\D/g,''),mail:(cc&&cc.mail)||o.lm||'',fr:(+o.fr||0)>0,tr:false,hd:true,ok:false,busy:false,msg:'',out:'',items:nfItens(o)};
+ const doc=String(o.doc||(cc&&cc.doc)||'').replace(/\D/g,''),cep=String(o.cep||(cc&&cc.cep)||'').replace(/\D/g,''),dd=cdDados(o),cid=String(o.cid||(cc&&cc.cid)||'');
+ const cu=/^(.*)\/([A-Za-z]{2})$/.exec(cid.trim());
+ nfd={id:id,nome:c.n||'',doc:doc,ie:cdDados(o).ie||'',cep:cep,lgr:dd.end,nro:dd.nro||'S/N',cpl:'',bairro:dd.bai,mun:cu?cu[1]:cid,uf:cu?cu[2].toUpperCase():'',ibge:'',fone:String((cc&&cc.tel)||o.lt||'').replace(/\D/g,''),mail:(cc&&cc.mail)||o.lm||'',fr:(+o.fr||0)>0,tr:false,hd:true,ok:false,busy:false,msg:'',out:'',items:nfItens(o)};
  nfConf();nfCep();nfIe()}
 async function nfIe(){const d=nfd;if(!d||d.doc.length!==14||d.ie)return;const j=await cnpjInfo(d.doc,d.uf);if(nfd!==d||d.ie||!j.ie)return;d.ie=j.ie;if(!d.busy)nfConf()}
 async function nfCep(){const d=nfd;if(!d||d.cep.length!==8)return;
@@ -1758,7 +1764,7 @@ function nfTxt(d){const k=nfCalc(d),E=NFE_EM,L=[],a=(...x)=>L.push(x.map(nx).joi
  return 'NOTAFISCAL|1|\n'+L.join('\n')+'\n'}   /* o NFeMail só aceita com esta linha de cabeçalho (sem ela: 400 The request is invalid) */
 function nfConf(){const d=nfd;if(!d)return;const o=ord(d.id),k=nfCalc(d),er=nfErr(d);
  const f=(key,lb,w,ph)=>'<div'+(w?' style="flex:'+w+'"':'')+'><label>'+lb+'</label><input value="'+esc(d[key])+'" placeholder="'+esc(ph||'')+'" onchange="nfF(\''+key+'\',this.value)"></div>';
- open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 19/11-e</span></p>'+
+ open('<h2>Gerar nota fiscal · Pedido #'+d.id+'</h2><p class="mu sm">Confira tudo: a nota é emitida de verdade na SEFAZ (ambiente de produção). Brinde não entra na nota. <span class="bd s0" title="Se não aparecer Layout SEBRAE, a página está em cache: recarregue">Layout SEBRAE · versão 19/11-f</span></p>'+
  '<div class="sec"><h4>Destinatário</h4><div class="fg">'+f('nome','Nome')+f('doc','CPF / CNPJ')+(k.cnpj?f('ie','Inscrição estadual (vazio = não contribuinte; "ISENTO" se for isento)'):'')+f('mail','E-mail (opcional)')+f('fone','Telefone (opcional)')+
  f('cep','CEP')+f('lgr','Logradouro')+f('nro','Número')+f('cpl','Complemento (opcional)')+f('bairro','Bairro')+f('mun','Município')+f('uf','UF')+'<div><label>Código IBGE</label><input value="'+esc(d.ibge)+'" readonly placeholder="busca pelo CEP"></div></div>'+
  '<p class="mu sm">'+(k.cnpj&&k.ie?'Contribuinte de ICMS':'Consumidor final')+' · '+(d.uf==='DF'?'Venda dentro do DF':'Venda para outro estado')+' · CFOP '+k.cfop+' · Natureza: Venda de produção do estabelecimento</p></div>'+
